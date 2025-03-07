@@ -4,9 +4,9 @@ const blogController = require('../controllers/blogs');
 
 // 博客路由
 router.get('/getAllBlogs', blogController.getAllBlogs);
-router.post('/blogs', blogController.createBlog);
-router.get('/blogs/:id', blogController.getBlogById);
-router.put('/blogs/:id', blogController.updateBlog);
-router.delete('/blogs/:id', blogController.deleteBlog);
+router.post('/', blogController.createBlog);
+router.get('/:id', blogController.getBlogById);
+router.put('/:id', blogController.updateBlog);
+router.delete('/:id', blogController.deleteBlog);
 
 module.exports = router;

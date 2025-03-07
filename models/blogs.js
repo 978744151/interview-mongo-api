@@ -22,16 +22,19 @@ const blogsSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  mscamp: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Mscamp",
-    required: true,
-  },
-  user: {
+ 
+  userId: {
     type: mongoose.Schema.ObjectId,
     ref: "User",
     required: true,
   },
 });
 
+// 配置virtual
+blogsSchema.virtual("blogs", {
+    ref: "blogs",
+    localField: "_id",
+    foreignField: "mscamp",
+    justOne: false,
+  });
 module.exports = mongoose.model("blogs", blogsSchema);
