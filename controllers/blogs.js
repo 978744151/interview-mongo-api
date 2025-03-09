@@ -1,15 +1,34 @@
 const Blog = require('../models/blogs.js'); // 假设已存在博客模型
+const asyncHandler = require("../middleware/async.js");
 
 // 获取所有博客
+// 获取所有博客
 exports.getAllBlogs = async (req, res) => {
-   
-        const blogs = await Blog.find({ });
-        return res
-          .status(200)
-          .json({ success: true, count: blogs.length, data: blogs });
-   
+    try {
+        const blogs = await Blog.find({})
+            .populate({
+                path: 'user',
+                select: 'name email role'
+            });
+        
+        // 处理返回数据，添加 createName 字段
+        const formattedBlogs = blogs.map(blog => {
+            const blogObj = blog.toObject();
+            blogObj.createName = blog.user ? blog.user.name : '';
+            return blogObj;
+        });
+        return res.status(200).json({ 
+            success: true, 
+            count: formattedBlogs.length, 
+            data: formattedBlogs 
+        });
+    } catch (err) {
+        return res.status(500).json({ 
+            success: false, 
+            message: err.message 
+        });
+    }
 };
-
 // 获取单个博客
 exports.getBlogById = async (req, res) => {
     try {
@@ -20,18 +39,33 @@ exports.getBlogById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+// ... existing code ...
 
-// 创建博客
+
 exports.createBlog = async (req, res) => {
     try {
-        const newBlog = new Blog(req.body);
+        console.log(req)
+        // 检查用户信息是否存在
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: '未授权，请先登录' });
+        }
+
+        const blogData = {
+            ...req.body,
+            user: req.user._id
+        };
+        const newBlog = new Blog(blogData);
         const savedBlog = await newBlog.save();
-        res.status(201).json(savedBlog);
+        res.status(201).json({
+            success: true,
+            id: savedBlog._id
+        });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
+// ... existing code ...
 // 更新博客
 exports.updateBlog = async (req, res) => {
     try {

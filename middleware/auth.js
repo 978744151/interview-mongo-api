@@ -14,7 +14,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
   //   else if (req.cookie.token) {
   //     token = req.cookie.token;
   //   }
-
+  console.log(token)
   // 校验token是否存在
   if (!token) {
     return next(new ErrorResponse("无权限访问该路由", 401));
