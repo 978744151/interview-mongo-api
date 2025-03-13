@@ -1,8 +1,14 @@
 const mongoose = require('mongoose');
+const dotenv = require("dotenv");
 
+// mongoose.connect('mongodb://admin:你的密码@8.155.53.210:27017/yourdb?authSource=admin');
+const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
+dotenv.config({
+  path
+});
 const connectDB = async () => {
   const conn = await mongoose.connect(
-    "mongodb://127.0.0.1:27017/admin", {
+    process.env.SERVER_DB, {
     useNewUrlParser: true,
   });
   mongoose.connection.on("error", function (error) {

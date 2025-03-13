@@ -3,9 +3,10 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 const colors = require("colors");
 const dotenv = require("dotenv");
+const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
 
 dotenv.config({
-  path: "./config/config.env",
+  path
 });
 
 const Mscamp = require("./models/Mscamp.js");

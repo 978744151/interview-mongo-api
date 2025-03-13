@@ -32,9 +32,17 @@ exports.getAllBlogs = async (req, res) => {
 // 获取单个博客
 exports.getBlogById = async (req, res) => {
     try {
-        const blog = await Blog.findById(req.params.id);
+        const blog = await Blog.findById(req.params.id).populate({
+            path: 'user',
+            select: 'name email role'
+        });
+        const blogObj = blog.toObject();
+        blogObj.createName = blog.user ? blog.user.name : '';
         if (!blog) return res.status(404).json({ message: 'Blog not found' });
-        res.status(200).json(blog);
+        res.status(200).json({ 
+            success: true, 
+            data: blogObj
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

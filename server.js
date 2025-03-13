@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const colors = require("colors");
 const errorHandler = require("./middleware/error.js");
 const cookieParser = require("cookie-parser");
+const http = require('http');
 
 // 引入路由文件
 const mscamps = require("./routes/mscamps.js");
@@ -13,9 +14,9 @@ const auth = require("./routes/auth.js");
 const users = require("./routes/users.js");
 const reviews = require("./routes/reviews.js");
 const blogs = require("./routes/blogs.js");
-
+const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
 dotenv.config({
-  path: "./config/config.env",
+  path
 });
 
 // ./docgen build -i 米修在线api.postman_collection.json -o index.html
@@ -24,6 +25,9 @@ dotenv.config({
 connectDB();
 
 const app = express();
+const cors = require('cors');
+
+app.use(cors());
 
 // 配置Body解析
 app.use(express.json());
@@ -49,15 +53,16 @@ app.use("/api/v1/blogs", blogs);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
-
-const server = app.listen(
-  PORT,
-  console.log(
-    `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.magenta
-      .bold
-  )
-);
+// const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+const port = process.env.SERVER_PORT || 5001;
+const url  = process.env.SERVER_IP
+server.listen(port,() => {
+  console.log(`Server running in ${process.env.NODE_ENV} mode on ${process.env.SERVER_URL}:${port}`);
+});
+// const server = app.listen(
+//   PORT, process.env.SERVER_IP,
+// );
 
 process.on("unhandledRejection", (err, promise) => {
   console.log(`Error: ${err.message}`.red.bold);

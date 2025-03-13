@@ -12,6 +12,10 @@ const blogsSchema = new mongoose.Schema({
     type: String,
     required: [true, "请添加内容"],
   },
+  content: {
+    type: String,
+    required: [true, "请添加博客内容"],
+  },
   description: {
     type: String,
     required: [false, "请填写博客的描述"],
