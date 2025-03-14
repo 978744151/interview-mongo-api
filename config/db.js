@@ -9,7 +9,8 @@ dotenv.config({
 const connectDB = async () => {
   const conn = await mongoose.connect(
     process.env.SERVER_DB, {
-    useNewUrlParser: true,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
   });
   mongoose.connection.on("error", function (error) {
     console.log("数据库连接失败：" + error)

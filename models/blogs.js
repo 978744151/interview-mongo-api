@@ -65,7 +65,8 @@ blogsSchema.virtual("blogs", {
     justOne: false,
   });
 
-  blogsSchema.set('toJSON', { virtuals: true, getters: true });
+  blogsSchema.set('toJSON', 
+    { virtuals: true, getters: true });
   blogsSchema.set('toObject', { virtuals: true, getters: true });
 // 添加删除所有博客的静态方法
 // blogsSchema.statics.deleteAllBlogs = async function() {

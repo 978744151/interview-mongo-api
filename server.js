@@ -6,6 +6,7 @@ const colors = require("colors");
 const errorHandler = require("./middleware/error.js");
 const cookieParser = require("cookie-parser");
 const http = require('http');
+const cors = require('cors');
 
 // 引入路由文件
 const mscamps = require("./routes/mscamps.js");
@@ -14,6 +15,9 @@ const auth = require("./routes/auth.js");
 const users = require("./routes/users.js");
 const reviews = require("./routes/reviews.js");
 const blogs = require("./routes/blogs.js");
+// const nftRoutes = require('./routes/nft');
+const categoryRoutes = require('./routes/nftCategory');
+
 const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
 dotenv.config({
   path
@@ -25,10 +29,10 @@ dotenv.config({
 connectDB();
 
 const app = express();
-const cors = require('cors');
 
-app.use(cors());
-
+app.use(cors({
+  origin: '*', // 允许所有域名访问，生产中可改为 'http://e5yue.cn'
+}));
 // 配置Body解析
 app.use(express.json());
 
@@ -39,6 +43,7 @@ app.use(morgan("dev"));
 
 // 使用cookie中间件
 app.use(cookieParser());
+
 app.get("", (req, res) => {
   res.status(200).json({ success: true, mes: "米修在线" });
 });
@@ -48,8 +53,9 @@ app.use("/api/v1/courses", courses);
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/users", users);
 app.use("/api/v1/reviews", reviews);
+app.use('/api/v1/nft-categories', categoryRoutes);
 app.use("/api/v1/blogs", blogs);
-
+// app.use('/api/v1/nfts', nftRoutes);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 
