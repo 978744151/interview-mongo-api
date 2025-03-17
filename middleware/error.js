@@ -10,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
     const message = `Resource not found with id of ${err.value}`;
     err = new ErrorResponse(message, 404);
   }
-
+  console.log(err)
   // 返回重复字段值响应
   if (err.code == 11000) {
     const message = "输入了重复的字段值";

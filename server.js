@@ -15,8 +15,10 @@ const auth = require("./routes/auth.js");
 const users = require("./routes/users.js");
 const reviews = require("./routes/reviews.js");
 const blogs = require("./routes/blogs.js");
-// const nftRoutes = require('./routes/nft');
+const nftRoutes = require('./routes/nft');
 const categoryRoutes = require('./routes/nftCategory');
+const uploadRoutes = require('./routes/upload');
+const paths = require('path');
 
 const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
 dotenv.config({
@@ -43,7 +45,7 @@ app.use(morgan("dev"));
 
 // 使用cookie中间件
 app.use(cookieParser());
-
+app.use('/uploads', express.static(paths.join(__dirname, 'public/uploads')));
 app.get("", (req, res) => {
   res.status(200).json({ success: true, mes: "米修在线" });
 });
@@ -55,7 +57,8 @@ app.use("/api/v1/users", users);
 app.use("/api/v1/reviews", reviews);
 app.use('/api/v1/nft-categories', categoryRoutes);
 app.use("/api/v1/blogs", blogs);
-// app.use('/api/v1/nfts', nftRoutes);
+app.use('/api/v1/nfts', nftRoutes);
+app.use('/api/v1/upload', uploadRoutes);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 
@@ -64,7 +67,7 @@ const server = http.createServer(app);
 const port = process.env.SERVER_PORT || 5001;
 const url  = process.env.SERVER_IP
 server.listen(port,() => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on ${process.env.SERVER_URL}:${port}`);
+  console.log(`Server running in ${process.env.NODE_ENV} mode on ${process.env.SERVER_URL}`);
 });
 // const server = app.listen(
 //   PORT, process.env.SERVER_IP,

@@ -4,7 +4,7 @@ const advancedResults = (model, populate) => async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // 处理关键字
-  const removeFields = ["select", "sort", "page", "limit"];
+  const removeFields = ["select", "sort", "page", "perPage"];
   // 清除关键字及值
   removeFields.forEach((param) => delete reqQuery[param]);
 
@@ -32,7 +32,7 @@ const advancedResults = (model, populate) => async (req, res, next) => {
 
   // 分页
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const limit = parseInt(req.query.perPage, 10) || 20;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
   const total = await model.countDocuments();
@@ -58,11 +58,10 @@ const advancedResults = (model, populate) => async (req, res, next) => {
 
   res.advancedResults = {
     success: true,
-    count: results.length,
+    total:( await model.find(JSON.parse(queryStr))).length,
     pagination,
     data: results,
   };
-
   next();
 };
 

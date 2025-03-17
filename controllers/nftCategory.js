@@ -18,7 +18,7 @@ exports.getCategoryById = asyncHandler(async (req, res) => {
     if (!category) {
         return res.status(404).json({
             success: false,
-            message: '分类未找到'
+            error: '分类未找到'
         });
     }
     res.status(200).json({ success: true, data: category });
@@ -36,7 +36,7 @@ exports.createCategory = asyncHandler(async (req, res) => {
     if (existingCategory) {
         return res.status(400).json({
             success: false,
-            message: '分类名称已存在（不区分大小写和前后空格）'
+            error: '分类名称已存在（不区分大小写和前后空格）'
         });
     }
 
@@ -77,13 +77,13 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
     }
     
     // 检查是否有NFT关联该分类
-    const nftCount = await NFT.countDocuments({ category: req.params.id });
-    if (nftCount > 0) {
-        return res.status(400).json({
-            success: false,
-            message: '该分类下存在NFT，无法删除'
-        });
-    }
+    // const nftCount = await NFT.countDocuments({ category: req.params.id });
+    // if (nftCount > 0) {
+    //     return res.status(400).json({
+    //         success: false,
+    //         message: '该分类下存在NFT，无法删除'
+    //     });
+    // }
 
     res.status(200).json({ 
         success: true, 
