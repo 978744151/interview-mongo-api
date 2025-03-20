@@ -4,11 +4,10 @@ const categoryController = require('../controllers/nftCategory');
 const { protect, authorize } = require('../middleware/auth');
 
 router.route('/').get(categoryController.getCategories)
-router.post('/',protect, categoryController.createCategory);
+router.post('/',protect, authorize('admin', 'owner'),categoryController.createCategory).put(protect,authorize('admin', 'owner'),categoryController.updateCategory)
+.delete(protect, authorize('admin', 'owner'),categoryController.deleteCategory);
 
-router.route('/:id')
-    .get(categoryController.getCategoryById)
-    .put(protect,categoryController.updateCategory)
-    .delete(protect, categoryController.deleteCategory);
+router.route('/:id').get(categoryController.getCategoryById)
+    
 
 module.exports = router;

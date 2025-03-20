@@ -83,7 +83,7 @@ exports.updateNFT = asyncHandler(async (req, res) => {
     }
 
     nft = await NFT.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
+        new: true,   
         runValidators: true
     });
 

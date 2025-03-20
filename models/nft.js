@@ -19,6 +19,25 @@ const NFTSchema = new mongoose.Schema({
         type: String,
         required: [true, '请上传NFT图片']
     },
+    price: {
+        type: String,
+        required: [true, '请输入NFT价格']
+    },
+    author: {
+        type: String,
+        required: [true, '请输入NFT作者']
+    },
+    likes: {
+        type: String,
+    },
+    quantity: {
+        type: String,
+        required: [true, '请输入NFT数量']
+    },
+    soldQty: {
+        type: String,
+        required: [false, '请输入NFT流通数量']
+    },
     owner: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',

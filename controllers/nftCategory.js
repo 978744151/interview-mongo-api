@@ -26,23 +26,19 @@ exports.getCategoryById = asyncHandler(async (req, res) => {
 
 // 创建分类
 exports.createCategory = asyncHandler(async (req, res) => {
-    const { name } = req.body;
+    const { name, cover } = req.body; // 新增cover参数
     
-    // 增强唯一性验证（处理空格和大小写）
-    const existingCategory = await NFTCategory.findOne({
-        name
-    });
-    
+    const existingCategory = await NFTCategory.findOne({ name });
     if (existingCategory) {
         return res.status(400).json({
             success: false,
-            error: '分类名称已存在（不区分大小写和前后空格）'
+            error: '分类名称已存在'
         });
     }
 
-    // 创建时自动trim名称
     const newCategory = await NFTCategory.create({ 
-        name
+        name,
+        cover // 新增封面字段
     });
     
     res.status(201).json({ success: true, data: newCategory });
@@ -51,8 +47,11 @@ exports.createCategory = asyncHandler(async (req, res) => {
 // 更新分类
 exports.updateCategory = asyncHandler(async (req, res) => {
     const category = await NFTCategory.findByIdAndUpdate(
-        req.params.id,
-        { name: req.body.name },
+        req.body.id,
+        { 
+            name: req.body.name,
+            cover: req.body.cover // 新增封面更新
+        },
         { new: true, runValidators: true }
     );
 
@@ -67,7 +66,7 @@ exports.updateCategory = asyncHandler(async (req, res) => {
 
 // 删除分类
 exports.deleteCategory = asyncHandler(async (req, res) => {
-    const category = await NFTCategory.findByIdAndDelete(req.params.id);
+    const category = await NFTCategory.findByIdAndDelete(req.body.id);
     
     if (!category) {
         return res.status(404).json({
