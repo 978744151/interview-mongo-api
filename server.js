@@ -7,7 +7,7 @@ const errorHandler = require("./middleware/error.js");
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const cors = require('cors');
-
+require('./utils/scheduler');
 // 引入路由文件
 const mscamps = require("./routes/mscamps.js");
 const courses = require("./routes/courses.js");
@@ -18,6 +18,8 @@ const blogs = require("./routes/blogs.js");
 const nftRoutes = require('./routes/nft');
 const categoryRoutes = require('./routes/nftCategory');
 const uploadRoutes = require('./routes/upload');
+const theOneNewsRoutes = require('./routes/theOneNews');
+
 const paths = require('path');
 
 const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
@@ -59,6 +61,7 @@ app.use('/api/v1/nft-categories', categoryRoutes);
 app.use("/api/v1/blogs", blogs);
 app.use('/api/v1/nfts', nftRoutes);
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/theone-news', theOneNewsRoutes);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 
