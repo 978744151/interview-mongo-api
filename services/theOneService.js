@@ -3,7 +3,9 @@ const TheOneNews = require('../models/theOneNews');
 const sendEmail = require('../utils/sendEmail');
 
 class TheOneService {
+    
     static previousAnnouncements = []; // 记录上一次的公告列表
+    static isFirstRun = true; // 添加首次运行标志
 
     static async fetchNews() {
         try {
@@ -22,7 +24,7 @@ class TheOneService {
 
             console.log(`发现${newAnnouncements.length}条新公告`);
 
-            // 处理新公告
+            // 处理新公告，但如果是首次运行则只保存不推送
             for (const record of newAnnouncements) {
                 // 检查数据库中是否已存在
                 const exists = await TheOneNews.findOne({
@@ -39,25 +41,33 @@ class TheOneService {
                         newsType: record.newsType,
                         readNum: record.readNum,
                         originalData: record,
-                        isPushed: false
+                        isPushed: this.isFirstRun // 首次运行时标记为已推送
                     });
 
-                    // 推送新消息
-                    await this.pushNotification(newNews);
+                    // 只有非首次运行才推送新消息
+                    if (!this.isFirstRun) {
+                        await this.pushNotification(newNews);
 
-                    // 更新为已推送状态
-                    await TheOneNews.findByIdAndUpdate(newNews._id, {
-                        isPushed: true
-                    });
+                        // 更新为已推送状态
+                        await TheOneNews.findByIdAndUpdate(newNews._id, {
+                            isPushed: true
+                        });
+                    }
                 }
             }
 
             // 更新上一次的公告列表为当前的公告列表
             this.previousAnnouncements = currentAnnouncements;
+            
+            // 首次运行完成后，将标志设为false
+            if (this.isFirstRun) {
+                this.isFirstRun = false;
+                console.log('首次运行完成，已记录当前公告，下次有新公告时将发送通知');
+            }
 
             return {
                 success: true,
-                message: `数据同步成功，发现${newAnnouncements.length}条新公告`
+                message: `数据同步成功，发现${newAnnouncements.length}条新公告${this.isFirstRun ? '（首次运行，仅记录不推送）' : ''}`
             };
         } catch (error) {
             console.error('TheOne API 同步失败:', error);
@@ -78,13 +88,14 @@ class TheOneService {
                 </div>
                 <p style="font-size:12px;color:#999;">此邮件由TheOne监控系统自动发送</p>
             `;
-
+    
             await sendEmail({
                 email: 'chentao19951011@icloud.com',
                 subject: `TheOne新公告：${news.title}`,
-                message
+                message,
+                html: true  // 添加这个参数，指示邮件内容是HTML格式
             });
-
+    
             console.log(`邮件已发送：${news.title}`);
         } catch (error) {
             console.error('推送失败:', error);
