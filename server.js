@@ -22,7 +22,7 @@ const theOneNewsRoutes = require('./routes/theOneNews');
 
 const paths = require('path');
 
-const path =  process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
+const path = process.env.NODE_ENV === 'production' ? "./config/config.prod.env" : './config/config.dev.env'
 dotenv.config({
   path
 });
@@ -47,7 +47,6 @@ app.use(morgan("dev"));
 
 // 使用cookie中间件
 app.use(cookieParser());
-app.use('/uploads', express.static(paths.join(__dirname, 'public/uploads')));
 app.get("", (req, res) => {
   res.status(200).json({ success: true, mes: "米修在线" });
 });
@@ -64,12 +63,13 @@ app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/theone-news', theOneNewsRoutes);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
+app.use('/uploads', express.static(paths.join(__dirname, 'public/uploads')));
 
 // const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 const port = process.env.SERVER_PORT || 5001;
-const url  = process.env.SERVER_IP
-server.listen(port,() => {
+const url = process.env.SERVER_IP
+server.listen(port, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on ${process.env.SERVER_URL}`);
 });
 // const server = app.listen(

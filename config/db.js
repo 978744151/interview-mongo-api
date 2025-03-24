@@ -12,6 +12,7 @@ const connectDB = async () => {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     serverSelectionTimeoutMS: 20000, // 增加到 20 秒
+    family: 4  // 指定优先使用IPv4进行连接
   });
   mongoose.connection.on("error", function (error) {
     console.log("数据库连接失败：" + error)
