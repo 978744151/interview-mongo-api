@@ -7,7 +7,7 @@ const blogsSchema = new mongoose.Schema({
     trim: true,
     required: [true, "请添加博客名称"],
   },
-  
+
   summary: {
     type: String,
     required: [true, "请添加内容"],
@@ -15,6 +15,12 @@ const blogsSchema = new mongoose.Schema({
   content: {
     type: String,
     required: [true, "请添加博客内容"],
+  },
+  type: {
+    type: String,
+    enum: ['推荐', '最新', '关注'],
+    default: '推荐',
+    required: [true, "请添加博客类型"],
   },
   description: {
     type: String,
@@ -32,7 +38,7 @@ const blogsSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    get: function(date) {
+    get: function (date) {
       if (!date) return '';
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -48,7 +54,7 @@ const blogsSchema = new mongoose.Schema({
     ref: "User",
     required: false,
   },
- 
+
 });
 
 
@@ -59,15 +65,15 @@ const blogsSchema = new mongoose.Schema({
 
 // 配置virtual
 blogsSchema.virtual("blogs", {
-    ref: "blogs",
-    localField: "_id",
-    foreignField: "mscamp",
-    justOne: false,
-  });
+  ref: "blogs",
+  localField: "_id",
+  foreignField: "mscamp",
+  justOne: false,
+});
 
-  blogsSchema.set('toJSON', 
-    { virtuals: true, getters: true });
-  blogsSchema.set('toObject', { virtuals: true, getters: true });
+blogsSchema.set('toJSON',
+  { virtuals: true, getters: true });
+blogsSchema.set('toObject', { virtuals: true, getters: true });
 // 添加删除所有博客的静态方法
 // blogsSchema.statics.deleteAllBlogs = async function() {
 //   try {

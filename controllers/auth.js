@@ -24,19 +24,56 @@ exports.register = asyncHandler(async (req, res, next) => {
  * @access  公开的
  */
 exports.login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, name } = req.body;
 
   // 验证邮箱和密码是否为空
   if (!email || !password) {
     return next(new ErrorResponse("请填写邮箱和密码", 400));
   }
 
-  // 获取用户信息
-  const user = await User.findOne({ email }).select("+password");
+  // 验证邮箱格式是否正确
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+  if (!emailRegex.test(email)) {
+    return next(new ErrorResponse("邮箱格式不正确", 400));
+  }
 
-  // 校验用户信息是否存在
+  // 获取用户信息
+  let user = await User.findOne({ email }).select("+password");
+
+  // 如果用户不存在，自动注册
   if (!user) {
-    return next(new ErrorResponse("参数有误", 401));
+    // 处理用户名：使用传入的name或邮箱前缀，并对中间部分进行星号替换
+    let userName = name || email.split('@')[0];
+
+    // 对用户名进行星号处理：保留首尾字符，中间用星号替换
+    if (userName.length > 2) {
+      const firstChar = userName.charAt(0);
+      const lastChar = userName.charAt(userName.length - 1);
+      const stars = '*'.repeat(userName.length - 2);
+      userName = firstChar + stars + lastChar;
+    }
+
+    // 生成随机卡通头像
+    const avatarStyles = ['adventurer', 'avataaars', 'big-ears', 'big-smile', 'bottts', 'croodles', 'micah', 'miniavs', 'open-peeps', 'personas'];
+    const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
+    const randomSeed = Math.floor(Math.random() * 1000);
+    const avatarUrl = `https://avatars.dicebear.com/api/${randomStyle}/${randomSeed}.svg`;
+
+    try {
+      // 创建新用户
+      user = await User.create({
+        name: userName,
+        email,
+        password,
+        role: 'user', // 默认角色
+        avatar: avatarUrl // 添加随机头像
+      });
+
+      // 生成token并返回
+      return sendTokenResponse(user, 201, res);
+    } catch (error) {
+      return next(new ErrorResponse(`注册失败: ${error.message}`, 400));
+    }
   }
 
   //  密码匹配
@@ -64,9 +101,19 @@ exports.getAllUser = asyncHandler(async (req, res, next) => {
  * @access  公开的
  */
 exports.getMe = asyncHandler(async (req, res, next) => {
-  //   console.log(req.user);
   const user = await User.findById(req.user.id);
-  res.status(200).json({ success: true, data: user });
+
+  if (!user) {
+    return next(new ErrorResponse("未找到用户信息", 404));
+  }
+
+  // 确保返回用户名
+  const userData = user.toObject();
+
+  res.status(200).json({
+    success: true,
+    data: userData
+  });
 });
 
 /**

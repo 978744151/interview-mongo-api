@@ -13,15 +13,15 @@ exports.getAllBlogs = async (req, res) => {
             });
 
         // 处理返回数据，添加 createName 字段
-        const formattedBlogs = blogs.map(blog => {
+        const data = blogs.map(blog => {
             const blogObj = blog.toObject();
             blogObj.createName = blog.user ? blog.user.name : '';
             return blogObj;
         });
         return res.status(200).json({
             success: true,
-            count: formattedBlogs.length,
-            data: formattedBlogs
+
+            data: { ...res.advancedResults, data, total: data.length, },
         });
     } catch (err) {
         return res.status(500).json({

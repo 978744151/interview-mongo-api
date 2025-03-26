@@ -8,10 +8,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, "请添加名字"],
   },
-  phone: {
-    type: String,
-    required: [true, "请添加手机号"],
-  },
+  // phone: {
+  //   type: String,
+  //   required: [true, "请添加手机号"],
+  // },
   email: {
     type: String,
     unique: true,
@@ -24,6 +24,12 @@ const UserSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, "请添加密码"],
+    minlength: 6,
+    select: false,
+  },
+  avatar: {
+    type: String,
+    required: [false, "请上传logo"],
     minlength: 6,
     select: false,
   },

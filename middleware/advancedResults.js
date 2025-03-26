@@ -58,7 +58,7 @@ const advancedResults = (model, populate) => async (req, res, next) => {
 
   res.advancedResults = {
     success: true,
-    total:( await model.find(JSON.parse(queryStr))).length,
+    total: (await model.find(JSON.parse(queryStr))).length,
     pagination,
     data: results,
   };
