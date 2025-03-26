@@ -1,12 +1,28 @@
 const express = require('express');
+const {
+    getAllBlogs,
+    getBlogById,
+    createBlog,
+    updateBlog,
+    deleteBlog
+} = require('../controllers/blogs');
+const { protect } = require('../middleware/auth');
+
+// 引入评论路由
+const commentRouter = require('./comments');
+
 const router = express.Router();
-const blogController = require('../controllers/blogs');
-const { protect } = require('../middleware/auth');  // 假设你的认证中间件在这个位置
-// 博客路由
-router.get('/getAllBlogs', blogController.getAllBlogs);
-router.post('/',protect, blogController.createBlog);
-router.get('/:id', blogController.getBlogById);
-router.put('/:id', blogController.updateBlog);
-router.delete('/:id', blogController.deleteBlog);
+
+// 重定向评论相关路由
+router.use('/:blogId/comments', commentRouter);
+
+router.route('/')
+    .get(getAllBlogs)
+    .post(protect, createBlog);
+
+router.route('/:id')
+    .get(getBlogById)
+    .put(protect, updateBlog)
+    .delete(protect, deleteBlog);
 
 module.exports = router;

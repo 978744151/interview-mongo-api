@@ -8,6 +8,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, "请添加名字"],
   },
+  phone: {
+    type: String,
+    required: [true, "请添加手机号"],
+  },
   email: {
     type: String,
     unique: true,
