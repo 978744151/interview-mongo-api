@@ -1,6 +1,8 @@
 const Comment = require('../models/comments');
 const Blog = require('../models/blogs.js');
 const asyncHandler = require("../middleware/async.js");
+const User = require("../models/User.js");
+const jwt = require("jsonwebtoken");
 
 // 创建评论
 exports.createComment = asyncHandler(async (req, res) => {
@@ -57,15 +59,20 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
             select: 'name avatar'
         }
     });
-
     // 处理评论数据，添加当前用户是否点赞的信息
     const processedComments = comments.map(comment => {
         const commentObj = comment.toObject();
-        // Check if user is authenticated and likes array exists
-        commentObj.isLiked = req.user && comment.likes ? comment.likes.includes(req.user._id) : false;
+        // 初始化 likes 数组（如果不存在）
+        if (!comment.likes) {
+            comment.likes = [];
+        }
+        // 检查用户是否登录并处理点赞状态
+        const userId = req.user ? req.user._id.toString() : null;
+        commentObj.isLiked = userId ? comment.likes.some(like => like.toString() === userId) : false;
+        commentObj.likeCount = comment.likes.length || 0;
+
         return commentObj;
     });
-
     res.status(200).json({
         success: true,
         count: processedComments.length,

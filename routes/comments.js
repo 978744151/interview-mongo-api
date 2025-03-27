@@ -6,12 +6,12 @@ const {
     deleteComment,
     likeComment
 } = require('../controllers/comments');
-const { protect } = require('../middleware/auth');
+const { protect, getUser } = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
 
 router.route('/')
-    .post(getBlogComments)
+    .post(getUser, getBlogComments)
 router.route('/create').post(protect, createComment);
 
 router.route('/reply')
