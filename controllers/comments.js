@@ -58,12 +58,18 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
         }
     });
 
-    console.log(`博客ID ${blogId} 的顶级评论数量:`, comments.length);
+    // 处理评论数据，添加当前用户是否点赞的信息
+    const processedComments = comments.map(comment => {
+        const commentObj = comment.toObject();
+        // Check if user is authenticated and likes array exists
+        commentObj.isLiked = req.user && comment.likes ? comment.likes.includes(req.user._id) : false;
+        return commentObj;
+    });
 
     res.status(200).json({
         success: true,
-        count: comments.length,
-        data: comments
+        count: processedComments.length,
+        data: processedComments
     });
 });
 
@@ -71,11 +77,11 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
 exports.replyToComment = asyncHandler(async (req, res) => {
     // 添加用户ID到请求体
     req.body.user = req.user._id;
-
+    console.log("用户ID:", req.body.commentId);
     // 检查父评论是否存在
-    const parentComment = await Comment.findById(req.params.commentId);
+    const parentComment = await Comment.findById(req.body.commentId);
     if (!parentComment) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: '父评论不存在'
         });
@@ -83,7 +89,7 @@ exports.replyToComment = asyncHandler(async (req, res) => {
 
     // 添加博客ID和父评论ID到请求体
     req.body.blog = parentComment.blog;
-    req.body.parentId = req.params.commentId;
+    req.body.parentId = req.body.commentId;
 
     const reply = await Comment.create(req.body);
 
@@ -124,4 +130,42 @@ exports.deleteComment = asyncHandler(async (req, res) => {
         success: true,
         message: '评论已删除'
     });
+});
+// 点赞评论
+exports.likeComment = asyncHandler(async (req, res) => {
+    const comment = await Comment.findById(req.body.commentId);
+
+    if (!comment) {
+        return res.status(404).json({
+            success: false,
+            message: '评论不存在'
+        });
+    }
+
+    // 检查用户是否已经点赞
+    const likeIndex = comment.likes.indexOf(req.user._id);
+
+    if (likeIndex === -1) {
+        // 未点赞，添加点赞
+        comment.likes.push(req.user._id);
+        comment.likeCount = comment.likes.length;
+        await comment.save();
+
+        res.status(200).json({
+            success: true,
+            message: '点赞成功',
+            likeCount: comment.likeCount
+        });
+    } else {
+        // 已点赞，取消点赞
+        comment.likes.splice(likeIndex, 1);
+        comment.likeCount = comment.likes.length;
+        await comment.save();
+
+        res.status(200).json({
+            success: true,
+            message: '取消点赞成功',
+            likeCount: comment.likeCount
+        });
+    }
 });
