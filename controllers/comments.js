@@ -159,7 +159,7 @@ exports.deleteComment = asyncHandler(async (req, res) => {
     const comment = await Comment.findById(req.params.commentId);
 
     if (!comment) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: '评论不存在'
         });
@@ -167,7 +167,7 @@ exports.deleteComment = asyncHandler(async (req, res) => {
 
     // 检查是否是评论作者或管理员
     if (comment.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-        return res.status(401).json({
+        return res.status(400).json({
             success: false,
             message: '没有权限删除此评论'
         });
