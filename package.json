@@ -25,6 +25,8 @@
   },
   "homepage": "https://gitlab.com/hemiahwu/msinterface-api#readme",
   "dependencies": {
+    "@dicebear/collection": "^9.2.2",
+    "@dicebear/core": "^9.2.2",
     "@openzeppelin/contracts": "^5.2.0",
     "axios": "^1.8.4",
     "bcryptjs": "^2.4.3",

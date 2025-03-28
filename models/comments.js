@@ -19,6 +19,19 @@ const CommentSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // fromUserAvatar: {
+    //     type: String
+    // },
+    // toUserAvatar: {
+    //     type: String
+    // },
+    fromUserName: {
+        type: String,
+        required: false
+    },
+    toUserName: {
+        type: String
+    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

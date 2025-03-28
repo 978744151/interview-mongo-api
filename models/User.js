@@ -30,8 +30,6 @@ const UserSchema = new mongoose.Schema({
   avatar: {
     type: String,
     required: [false, "请上传logo"],
-    minlength: 6,
-    select: false,
   },
   role: {
     type: String,

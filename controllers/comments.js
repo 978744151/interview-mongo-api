@@ -22,16 +22,73 @@ exports.createComment = asyncHandler(async (req, res) => {
     req.body.blog = req.body.blogId;
 
     const comment = await Comment.create(req.body);
+    // 填充用户信息后返回
+    const populatedComment = await Comment.findById(comment._id)
+        .populate({
+            path: 'user',
+            select: 'name avatar'
+        });
 
     res.status(201).json({
         success: true,
-        data: comment
+        data: populatedComment
+    });
+});
+
+
+// 回复评论
+exports.replyToComment = asyncHandler(async (req, res) => {
+    // 添加用户ID到请求体
+    req.body.user = req.user._id;
+
+    // 检查要回复的评论是否存在
+    const parentComment = await Comment.findById(req.body.commentId);
+    if (!parentComment) {
+        return res.status(400).json({
+            success: false,
+            message: '要回复的评论不存在'
+        });
+    }
+
+    // 获取当前用户和被回复用户的信息
+    const [currentUser, replyToUser] = await Promise.all([
+        User.findById(req.user._id).select('name'),
+        User.findById(req.body.replyTo || parentComment.user).select('name')
+    ]);
+    // 构建回复数据
+    const replyData = {
+        content: req.body.content,
+        user: req.user._id,
+        blog: parentComment.blog,
+        parentId: parentComment.parentId || parentComment._id,
+        replyTo: req.body.replyTo || parentComment.user,
+        fromUserName: currentUser.name,          // 记录评论者用户名
+        toUserName: replyToUser.name,           // 记录被回复者用户名
+        // fromUserAvatar: currentUser.avatar,    // 添加评论者头像
+        // toUserAvatar: replyToUser.avatar      // 添加被回复者头像
+    };
+
+    const reply = await Comment.create(replyData);
+    console.log(reply)
+    // 填充用户信息后返回
+    const populatedReply = await Comment.findById(reply._id)
+        .populate({
+            path: 'user',
+            select: 'name avatar'
+        })
+        .populate({
+            path: 'replyTo',
+            select: 'name avatar'
+        });
+
+    res.status(201).json({
+        success: true,
+        data: populatedReply
     });
 });
 
 // 获取博客的所有评论
 exports.getBlogComments = asyncHandler(async (req, res) => {
-    // 先检查博客是否存在
     const blogId = req.body.blogId;
     const blog = await Blog.findById(blogId);
     if (!blog) {
@@ -41,11 +98,7 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
         });
     }
 
-    // 查询所有与该博客相关的评论，不限制parentId
-    const allComments = await Comment.find({ blog: blogId });
-    console.log(`博客ID ${blogId} 的所有评论数量:`, allComments.length);
-
-    // 获取顶级评论（没有parentId的评论）
+    // 获取顶级评论及其回复
     const comments = await Comment.find({
         blog: blogId,
         parentId: null
@@ -54,55 +107,50 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
         select: 'name avatar'
     }).populate({
         path: 'replies',
-        populate: {
-            path: 'user',
-            select: 'name avatar'
-        }
-    });
-    // 处理评论数据，添加当前用户是否点赞的信息
+        populate: [
+            {
+                path: 'user',
+                select: 'name avatar'
+            },
+            {
+                path: 'replyTo',
+                select: 'name avatar'
+            }
+        ],
+        options: { sort: { createdAt: 1 } }
+    }).sort({ createdAt: -1 });
+
+    // 处理评论数据
     const processedComments = comments.map(comment => {
         const commentObj = comment.toObject();
-        // 初始化 likes 数组（如果不存在）
-        if (!comment.likes) {
-            comment.likes = [];
-        }
-        // 检查用户是否登录并处理点赞状态
+        // 处理点赞信息
+        if (!comment.likes) comment.likes = [];
         const userId = req.user ? req.user._id.toString() : null;
         commentObj.isLiked = userId ? comment.likes.some(like => like.toString() === userId) : false;
         commentObj.likeCount = comment.likes.length || 0;
 
+        // 处理回复的点赞信息和用户名信息
+        if (commentObj.replies) {
+            commentObj.replies = commentObj.replies.map(reply => {
+                if (!reply.likes) reply.likes = [];
+                reply.isLiked = userId ? reply.likes.some(like => like.toString() === userId) : false;
+                reply.likeCount = reply.likes.length || 0;
+
+                // 保留fromUserName和toUserName
+                reply.fromUserName = reply.fromUserName || reply.user?.name || '';
+                reply.toUserName = reply.toUserName || reply.replyTo?.name || '';
+
+                return reply;
+            });
+        }
+
         return commentObj;
     });
+
     res.status(200).json({
         success: true,
         count: processedComments.length,
         data: processedComments
-    });
-});
-
-// 回复评论
-exports.replyToComment = asyncHandler(async (req, res) => {
-    // 添加用户ID到请求体
-    req.body.user = req.user._id;
-    console.log("用户ID:", req.body.commentId);
-    // 检查父评论是否存在
-    const parentComment = await Comment.findById(req.body.commentId);
-    if (!parentComment) {
-        return res.status(400).json({
-            success: false,
-            message: '父评论不存在'
-        });
-    }
-
-    // 添加博客ID和父评论ID到请求体
-    req.body.blog = parentComment.blog;
-    req.body.parentId = req.body.commentId;
-
-    const reply = await Comment.create(req.body);
-
-    res.status(201).json({
-        success: true,
-        data: reply
     });
 });
 

@@ -54,10 +54,100 @@ exports.login = asyncHandler(async (req, res, next) => {
     }
 
     // 生成随机卡通头像
-    const avatarStyles = ['adventurer', 'avataaars', 'big-ears', 'big-smile', 'bottts', 'croodles', 'micah', 'miniavs', 'open-peeps', 'personas'];
+    const avatarStyles = ['adventurer', 'avataaars', 'big-ears', 'big-smile', 'glass', 'notionists-neutral', 'bottts', 'croodles', 'micah', 'miniavs', 'open-peeps', 'personas', 'pixel-art', 'fun-emoji', 'pixel-art-neutral'];
     const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
-    const randomSeed = Math.floor(Math.random() * 1000);
-    const avatarUrl = `https://avatars.dicebear.com/api/${randomStyle}/${randomSeed}.svg`;
+    const hair = ['long01', 'long02'
+      ,
+      'long03'
+      ,
+      'long04'
+      ,
+      'long05'
+      ,
+      'long06'
+      ,
+      'long07'
+      ,
+      'long08'
+      ,
+      'long09'
+      ,
+      'long10'
+      ,
+      'long11'
+      ,
+      'long12'
+      ,
+      'long13'
+      ,
+      'long14'
+      ,
+      'long15'
+      ,
+      'long16'
+      ,
+      'long17'
+      ,
+      'long18'
+      ,
+      'long19'
+      ,
+      'long20'
+      ,
+      'long21'
+      ,
+      'long22'
+      ,
+      'long23'
+      ,
+      'long24'
+      ,
+      'long25'
+      ,
+      'long26'
+      ,
+      'short01'
+      ,
+      'short02'
+      ,
+      'short03'
+      ,
+      'short04'
+      ,
+      'short05'
+      ,
+      'short06'
+      ,
+      'short07'
+      ,
+      'short08'
+      ,
+      'short09'
+      ,
+      'short10'
+      ,
+      'short11'
+      ,
+      'short12'
+      ,
+      'short13'
+      ,
+      'short14'
+      ,
+      'short15'
+      ,
+      'short16'
+      ,
+      'short17'
+      ,
+      'short18'
+      ,
+      'short19'
+    ]
+    console.log(hair)
+    const hairStyle = hair[Math.floor(Math.random() * hair.length)];
+    console.log('hairStyle', Math.floor(Math.random() * hair.length));
+    const avatarUrl = `https://api.dicebear.com/9.x/${randomStyle}/svg`;
 
     try {
       // 创建新用户
