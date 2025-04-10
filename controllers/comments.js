@@ -29,7 +29,7 @@ exports.createComment = asyncHandler(async (req, res) => {
             select: 'name avatar'
         });
 
-    res.status(201).json({
+    res.status(200).json({
         success: true,
         data: populatedComment
     });
@@ -81,7 +81,7 @@ exports.replyToComment = asyncHandler(async (req, res) => {
             select: 'name avatar'
         });
 
-    res.status(201).json({
+    res.status(200).json({
         success: true,
         data: populatedReply
     });

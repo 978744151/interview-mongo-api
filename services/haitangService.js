@@ -2,7 +2,7 @@ const axios = require('axios');
 const TheOneNews = require('../models/theOneNews');
 const sendEmail = require('../utils/sendEmail');
 
-class TheOneService {
+class HaitangService {
 
     static previousAnnouncements = []; // 记录上一次的公告列表
     static isFirstRun = true; // 添加首次运行标志
@@ -10,11 +10,15 @@ class TheOneService {
     static async fetchNews() {
         try {
             // 获取最新公告列表
-            const response = await axios.post('https://api.theone.art/market/api/dynamicNews/findNewsList', {
-                "categoryId": 36, "location": "list", "pageCount": 1, "pageSize": 20, "commodityCategoryIds": [], "top": 0
+            // const response = await axios.post('https://api.theone.art/market/api/dynamicNews/findNewsList', {
+            //     "categoryId": 36, "location": "list", "pageCount": 1, "pageSize": 20, "commodityCategoryIds": [], "top": 0
+            // });
+            // const currentAnnouncements = response.data.data.records; // 当前时间的公告列表
+            const response = await axios.post('https://m5.haitangwh.cn/api/v1/notice/list', {
+                page: 1,
+                limit: 10
             });
-            const currentAnnouncements = response.data.data.records; // 当前时间的公告列表
-
+            const currentAnnouncements = response.data.data.list; // 当前时间的公告列表
             // 找出新公告（在当前列表中但不在上一次列表中的公告）
             const newAnnouncements = currentAnnouncements.filter(record =>
                 !this.previousAnnouncements.some(item =>
@@ -35,7 +39,7 @@ class TheOneService {
                 if (!exists) {
                     // 创建新记录
                     const newNews = await TheOneNews.create({
-                        title: record.name,
+                        title: record.title,
                         content: record.content,
                         createTime: record.createTime,
                         newsType: record.newsType,
@@ -86,12 +90,12 @@ class TheOneService {
                     <p>${news.content}</p>
                     <p style="color:#888;">发布时间：${new Date(news.createTime).toLocaleString()}</p>
                 </div>
-                <p style="font-size:12px;color:#999;">此邮件由TheOne监控系统自动发送</p>
+                <p style="font-size:12px;color:#999;">此邮件由NftTools监控系统自动发送</p>
             `;
 
             await sendEmail({
                 email: 'chentao19951011@icloud.com',
-                subject: `TheOne新公告：${news.title}`,
+                subject: `海棠新公告：${news.title}`,
                 message,
                 html: true  // 添加这个参数，指示邮件内容是HTML格式
             });
@@ -103,4 +107,4 @@ class TheOneService {
     }
 }
 
-module.exports = TheOneService;
+module.exports = HaitangService;

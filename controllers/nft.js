@@ -6,7 +6,7 @@ const asyncHandler = require("../middleware/async");
 exports.getNFTs = asyncHandler(async (req, res) => {
     const { category } = req.query;
     const query = {};
-    
+
     if (category) {
         query.category = category;
     }
@@ -17,8 +17,8 @@ exports.getNFTs = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         success: true,
-        
-        data: {...res.advancedResults}
+
+        data: { ...res.advancedResults }
     });
 });
 
@@ -38,7 +38,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         owner: req.user.id
     });
 
-    res.status(201).json({
+    res.status(200).json({
         success: true,
         data: nft
     });
@@ -83,7 +83,7 @@ exports.updateNFT = asyncHandler(async (req, res) => {
     }
 
     nft = await NFT.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,   
+        new: true,
         runValidators: true
     });
 

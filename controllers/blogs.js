@@ -80,7 +80,7 @@ exports.createBlog = async (req, res) => {
         };
         const newBlog = new Blog(blogData);
         const savedBlog = await newBlog.save();
-        res.status(201).json({
+        res.status(200).json({
             success: true,
             id: savedBlog._id
         });

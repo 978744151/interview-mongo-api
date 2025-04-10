@@ -160,7 +160,7 @@ exports.login = asyncHandler(async (req, res, next) => {
       });
 
       // 生成token并返回
-      return sendTokenResponse(user, 201, res);
+      return sendTokenResponse(user, 200, res);
     } catch (error) {
       return next(new ErrorResponse(`注册失败: ${error.message}`, 400));
     }
