@@ -26,6 +26,10 @@ const blogsSchema = new mongoose.Schema({
     type: String,
     required: [false, "请填写博客的描述"],
   },
+  blogImage: {
+    type: [{iamge:String}],  // 字符串数组，用于存储图片URL或路径
+    default: [],     // 默认为空数组
+  },
   weeks: {
     type: String,
     required: [false, "请添加学习周期"],
