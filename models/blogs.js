@@ -27,8 +27,14 @@ const blogsSchema = new mongoose.Schema({
     required: [false, "请填写博客的描述"],
   },
   blogImage: {
-    type: [{iamge:String}],  // 字符串数组，用于存储图片URL或路径
-    default: [],     // 默认为空数组
+    type: [{
+      image: {
+        type: String,
+        required: true
+      }
+    }],
+    required: [true, "请选择图片"],
+    default: [],   // 默认为空数组
   },
   weeks: {
     type: String,

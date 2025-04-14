@@ -9,18 +9,22 @@ exports.getAllBlogs = async (req, res) => {
         const blogs = await Blog.find({})
             .populate({
                 path: 'user',
-                select: 'name email role'
+                select: 'name email role avatar'
             });
 
-        // 处理返回数据，添加 createName 字段
         const data = blogs.map(blog => {
             const blogObj = blog.toObject();
             blogObj.createName = blog.user ? blog.user.name : '';
+            // 直接获取图片URL数组
+            blogObj.images = blog.blogImage.map(img => img.image);
+            // 添加默认图片，取第一张图片，如果没有则为空字符串
+            blogObj.defaultImage = blog.blogImage[0]?.image || '';
+            return blogObj;
             return blogObj;
         });
+
         return res.status(200).json({
             success: true,
-
             data: { ...res.advancedResults, data, total: data.length, },
         });
     } catch (err) {
