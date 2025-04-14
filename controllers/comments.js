@@ -7,8 +7,14 @@ const jwt = require("jsonwebtoken");
 // 创建评论
 exports.createComment = asyncHandler(async (req, res) => {
     // 添加用户ID到请求体
-    req.body.user = req.user._id;
-
+    req.body.user = req.user?._id;
+    if (!req.user?._id) {
+        return res.status(401).json({
+            success: false,
+            message: '请先登录'
+        });
+        return;
+    }
     // 检查博客是否存在
     const blog = await Blog.findById(req.body.blogId);
     if (!blog) {

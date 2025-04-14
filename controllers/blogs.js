@@ -20,7 +20,6 @@ exports.getAllBlogs = async (req, res) => {
             // 添加默认图片，取第一张图片，如果没有则为空字符串
             blogObj.defaultImage = blog.blogImage[0]?.image || '';
             return blogObj;
-            return blogObj;
         });
 
         return res.status(200).json({
@@ -46,6 +45,8 @@ exports.getBlogById = async (req, res) => {
         if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
         const blogObj = blog.toObject();
+        blogObj.images = blog.blogImage.map(img => img.image);
+        blogObj.defaultImage = blog.blogImage[0]?.image || '';
         blogObj.createName = blog.user ? blog.user.name : '';
 
         // 获取博客评论数量
