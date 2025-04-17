@@ -42,6 +42,17 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // 关注的用户
+  following: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
+
+  // 粉丝
+  followers: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
 });
 
 UserSchema.pre("save", async function (next) {

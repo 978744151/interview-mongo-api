@@ -20,6 +20,7 @@ const categoryRoutes = require('./routes/nftCategory');
 const uploadRoutes = require('./routes/upload');
 const theOneNewsRoutes = require('./routes/theOneNews');
 const comment = require('./routes/comments');
+const follow = require('./routes/follow');
 
 const paths = require('path');
 
@@ -63,6 +64,7 @@ app.use('/api/v1/nfts', nftRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/theone-news', theOneNewsRoutes);
 app.use('/api/v1/comment', comment);
+app.use('/api/v1/follow', follow);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 app.use('/uploads', express.static(paths.join(__dirname, 'public/uploads')));
