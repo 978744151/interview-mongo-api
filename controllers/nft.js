@@ -56,10 +56,13 @@ exports.getNFT = asyncHandler(async (req, res) => {
             message: 'NFT未找到'
         });
     }
+    console.log(nft)
+    const nftObj = nft.toObject();
+    nftObj.id = nft._id;
 
     res.status(200).json({
         success: true,
-        data: nft
+        data: nftObj
     });
 });
 
