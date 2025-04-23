@@ -1,3 +1,5 @@
 node_modules
 config/config.env
 public
+admin-dashboard
+admin-dashboard/src
