@@ -7,6 +7,9 @@ const errorHandler = require("./middleware/error.js");
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const cors = require('cors');
+
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 require('./utils/scheduler');
 // 引入路由文件
 const mscamps = require("./routes/mscamps.js");
@@ -23,6 +26,8 @@ const comment = require('./routes/comments');
 const follow = require('./routes/follow');
 const nftConsignmentRoutes = require('./routes/nftConsignment');
 const nftTransactionRoutes = require('./routes/nftTransaction');
+const userProfileRoutes = require('./routes/userProfile');
+const mysteryBoxRoutes = require('./routes/mysteryBox');
 
 const paths = require('path');
 
@@ -37,6 +42,41 @@ dotenv.config({
 connectDB();
 
 const app = express();
+
+// Swagger配置
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'NFT平台API',
+      version: '1.0.0',
+      description: 'NFT交易平台API文档',
+    },
+    servers: [
+      {
+        url: process.env.NODE_ENV === 'production' 
+          ? `${process.env.SERVER_URL}/api/v1` 
+          : `http://localhost:${process.env.SERVER_PORT || 5001}/api/v1`,
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+  apis: [
+    './routes/*.js', 
+    './controllers/*.js', 
+    './models/*.js'
+  ],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
 app.use(cors({
   origin: '*', // 允许所有域名访问，生产中可改为 'http://e5yue.cn'
@@ -54,6 +94,10 @@ app.use(cookieParser());
 app.get("", (req, res) => {
   res.status(200).json({ success: true, mes: "米修在线" });
 });
+
+// Swagger文档路由
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 // 挂载路由节点 http://localhost:5000/api/v1/mscamps
 app.use("/api/v1/mscamps", mscamps);
 app.use("/api/v1/courses", courses);
@@ -69,6 +113,8 @@ app.use('/api/v1/comment', comment);
 app.use('/api/v1/follow', follow);
 app.use('/api/v1/nft-consignments', nftConsignmentRoutes);
 app.use('/api/v1/nft-transactions', nftTransactionRoutes);
+app.use('/api/v1/profile', userProfileRoutes);
+app.use('/api/v1/mystery-boxes', mysteryBoxRoutes);
 // 一定要写在路由挂载之前
 app.use(errorHandler);
 app.use('/uploads', express.static(paths.join(__dirname, 'public/uploads')));

@@ -4,9 +4,44 @@ const NFT = require('../models/nft');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
-// @desc    获取所有NFT寄售列表
-// @route   GET /api/v1/nft-consignments
-// @access  Public
+/**
+ * @swagger
+ * tags:
+ *   name: NFT寄售
+ *   description: NFT寄售相关API
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     NFTConsignment:
+ *       type: object
+ *       properties:
+ *         nft:
+ *           type: string
+ *           description: NFT的ID
+ *         seller:
+ *           type: string
+ *           description: 卖家ID
+ *         listingPrice:
+ *           type: string
+ *           description: 寄售价格
+ *         isAvailable:
+ *           type: boolean
+ *           description: 是否可购买
+ */
+
+/**
+ * @swagger
+ * /nft-consignments:
+ *   get:
+ *     summary: 获取所有NFT寄售列表
+ *     tags: [NFT寄售]
+ *     responses:
+ *       200:
+ *         description: 成功获取寄售列表
+ */
 exports.getNFTConsignments = asyncHandler(async (req, res, next) => {
   const consignments = await NFTConsignment.find({ isAvailable: true })
     .populate({
@@ -25,9 +60,25 @@ exports.getNFTConsignments = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    获取单个NFT寄售信息
-// @route   GET /api/v1/nft-consignments/:id
-// @access  Public
+/**
+ * @swagger
+ * /nft-consignments/{id}:
+ *   get:
+ *     summary: 获取单个NFT寄售信息
+ *     tags: [NFT寄售]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 寄售记录ID
+ *     responses:
+ *       200:
+ *         description: 成功获取寄售信息
+ *       404:
+ *         description: 未找到寄售记录
+ */
 exports.getNFTConsignment = asyncHandler(async (req, res, next) => {
   const consignment = await NFTConsignment.findById(req.params.id)
     .populate({
@@ -49,9 +100,38 @@ exports.getNFTConsignment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    创建NFT寄售
-// @route   POST /api/v1/nft-consignments
-// @access  Private
+/**
+ * @swagger
+ * /nft-consignments:
+ *   post:
+ *     summary: 创建NFT寄售
+ *     tags: [NFT寄售]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nft
+ *               - listingPrice
+ *             properties:
+ *               nft:
+ *                 type: string
+ *                 description: 要寄售的NFT ID
+ *               listingPrice:
+ *                 type: string
+ *                 description: 寄售价格
+ *     responses:
+ *       201:
+ *         description: 成功创建寄售
+ *       401:
+ *         description: 无权寄售此NFT
+ *       404:
+ *         description: 未找到NFT
+ */
 exports.createNFTConsignment = asyncHandler(async (req, res, next) => {
   // 添加用户到请求体
   req.body.seller = req.user.id;
@@ -76,9 +156,39 @@ exports.createNFTConsignment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    更新NFT寄售信息
-// @route   PUT /api/v1/nft-consignments/:id
-// @access  Private
+/**
+ * @swagger
+ * /nft-consignments/{id}:
+ *   put:
+ *     summary: 更新NFT寄售信息
+ *     tags: [NFT寄售]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 寄售记录ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               listingPrice:
+ *                 type: string
+ *                 description: 新的寄售价格
+ *     responses:
+ *       200:
+ *         description: 成功更新寄售信息
+ *       401:
+ *         description: 无权更新此寄售
+ *       404:
+ *         description: 未找到寄售记录
+ */
 exports.updateNFTConsignment = asyncHandler(async (req, res, next) => {
   let consignment = await NFTConsignment.findById(req.params.id);
 
@@ -102,9 +212,29 @@ exports.updateNFTConsignment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    删除NFT寄售
-// @route   DELETE /api/v1/nft-consignments/:id
-// @access  Private
+/**
+ * @swagger
+ * /nft-consignments/{id}:
+ *   delete:
+ *     summary: 删除NFT寄售
+ *     tags: [NFT寄售]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 寄售记录ID
+ *     responses:
+ *       200:
+ *         description: 成功删除寄售
+ *       401:
+ *         description: 无权删除此寄售
+ *       404:
+ *         description: 未找到寄售记录
+ */
 exports.deleteNFTConsignment = asyncHandler(async (req, res, next) => {
   const consignment = await NFTConsignment.findById(req.params.id);
 
@@ -125,9 +255,29 @@ exports.deleteNFTConsignment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    购买NFT
-// @route   POST /api/v1/nft-consignments/:id/purchase
-// @access  Private
+/**
+ * @swagger
+ * /nft-consignments/{id}/purchase:
+ *   post:
+ *     summary: 购买NFT
+ *     tags: [NFT寄售]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 寄售记录ID
+ *     responses:
+ *       200:
+ *         description: 成功购买NFT
+ *       400:
+ *         description: NFT已被购买或不能购买自己的NFT
+ *       404:
+ *         description: 未找到寄售记录或NFT
+ */
 exports.purchaseNFT = asyncHandler(async (req, res, next) => {
   const consignment = await NFTConsignment.findById(req.params.id);
 

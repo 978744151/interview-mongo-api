@@ -1,0 +1,74 @@
+[
+  {
+    "_id": "6d713995b721c3bb38c1f601",
+    "name": "限量潮玩盲盒",
+    "description": "限量发售的潮流NFT盲盒，可能获得稀有藏品",
+    "imageUrl": "https://example.com/mysterybox1.jpg",
+    "price": "1000",
+    "totalQuantity": 500,
+    "soldQuantity": 0,
+    "isActive": true,
+    "possibleNFTs": [
+      {
+        "nft": "5d713995b721c3bb38c1f5d1",
+        "probability": 70
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d2",
+        "probability": 25
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d3",
+        "probability": 5
+      }
+    ]
+  },
+  {
+    "_id": "6d713995b721c3bb38c1f602",
+    "name": "艺术珍藏盲盒",
+    "description": "精选艺术家作品盲盒，每个都是独一无二的艺术品",
+    "imageUrl": "https://example.com/mysterybox2.jpg",
+    "price": "2000",
+    "totalQuantity": 300,
+    "soldQuantity": 0,
+    "isActive": true,
+    "possibleNFTs": [
+      {
+        "nft": "5d713995b721c3bb38c1f5d4",
+        "probability": 60
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d5",
+        "probability": 30
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d6",
+        "probability": 10
+      }
+    ]
+  },
+  {
+    "_id": "6d713995b721c3bb38c1f603",
+    "name": "游戏角色盲盒",
+    "description": "游戏角色NFT盲盒，收集完整系列解锁特别奖励",
+    "imageUrl": "https://example.com/mysterybox3.jpg",
+    "price": "800",
+    "totalQuantity": 1000,
+    "soldQuantity": 0,
+    "isActive": true,
+    "possibleNFTs": [
+      {
+        "nft": "5d713995b721c3bb38c1f5d7",
+        "probability": 50
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d8",
+        "probability": 40
+      },
+      {
+        "nft": "5d713995b721c3bb38c1f5d9",
+        "probability": 10
+      }
+    ]
+  }
+] 

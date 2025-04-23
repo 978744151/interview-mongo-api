@@ -5,9 +5,85 @@ const asyncHandler = require("../middleware/async.js");
 const sendEmail = require("../utils/sendEmail.js");
 
 /**
- * @desc    注册
- * @route   POST /api/v1/auth/register
- * @access  公开的
+ * @swagger
+ * tags:
+ *   name: 认证
+ *   description: 用户认证相关API
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: 用户名
+ *         email:
+ *           type: string
+ *           description: 邮箱
+ *         password:
+ *           type: string
+ *           description: 密码
+ *         role:
+ *           type: string
+ *           description: 角色
+ *           enum: [user, publisher, admin]
+ *         avatar:
+ *           type: string
+ *           description: 头像URL
+ *       example:
+ *         name: "张三"
+ *         email: "zhangsan@example.com"
+ *         password: "123456"
+ *         role: "user"
+ *         avatar: "https://api.dicebear.com/9.x/avataaars/svg"
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: 用户注册
+ *     tags: [认证]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [user, publisher]
+ *     responses:
+ *       200:
+ *         description: 注册成功并返回token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
  */
 exports.register = asyncHandler(async (req, res, next) => {
   const { name, email, role, password } = req.body;
@@ -19,9 +95,35 @@ exports.register = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    登录
- * @route   POST /api/v1/auth/login
- * @access  公开的
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: 用户登录
+ *     tags: [认证]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *                 description: 自动注册时使用的用户名
+ *     responses:
+ *       200:
+ *         description: 登录成功并返回token
+ *       400:
+ *         description: 邮箱格式不正确或缺少必要字段
+ *       401:
+ *         description: 密码错误
  */
 exports.login = asyncHandler(async (req, res, next) => {
   const { email, password, name } = req.body;
@@ -176,19 +278,36 @@ exports.login = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    获取当前登录用户信息
- * @route   GET /api/v1/auth/me
- * @access  公开的
+ * @swagger
+ * /auth/users:
+ *   get:
+ *     summary: 获取所有用户信息
+ *     tags: [认证]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 成功获取所有用户
  */
 exports.getAllUser = asyncHandler(async (req, res, next) => {
   //   console.log(req.user);
   const user = await User.find();
   res.status(200).json({ success: true, data: user });
 });
+
 /**
- * @desc    获取当前登录用户信息
- * @route   GET /api/v1/auth/me
- * @access  公开的
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: 获取当前登录用户信息
+ *     tags: [认证]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 成功获取用户信息
+ *       404:
+ *         description: 未找到用户信息
  */
 exports.getMe = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);

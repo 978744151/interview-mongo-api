@@ -1,9 +1,102 @@
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Comment:
+ *       type: object
+ *       required:
+ *         - content
+ *         - blog
+ *         - user
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: Comment ID
+ *         content:
+ *           type: string
+ *           description: Content of the comment
+ *         blog:
+ *           type: string
+ *           description: ID of the blog post
+ *         user:
+ *           type: string
+ *           description: ID of the user who made the comment
+ *         parentId:
+ *           type: string
+ *           description: ID of the parent comment (for replies)
+ *           nullable: true
+ *         replyTo:
+ *           type: string
+ *           description: ID of the user being replied to
+ *           nullable: true
+ *         fromUserName:
+ *           type: string
+ *           description: Name of the commenting user
+ *         toUserName:
+ *           type: string
+ *           description: Name of the user being replied to
+ *         likes:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Array of user IDs who liked the comment
+ *         likeCount:
+ *           type: integer
+ *           description: Count of likes on the comment
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: Date and time when the comment was created
+ */
+
 const Comment = require('../models/comments');
 const Blog = require('../models/blogs.js');
 const asyncHandler = require("../middleware/async.js");
 const User = require("../models/User.js");
 const jwt = require("jsonwebtoken");
 
+/**
+ * @swagger
+ * /api/comments/create:
+ *   post:
+ *     summary: Create a new comment
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *               - blogId
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Content of the comment
+ *               blogId:
+ *                 type: string
+ *                 description: ID of the blog post to comment on
+ *     responses:
+ *       200:
+ *         description: Comment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Comment'
+ *       401:
+ *         description: User not logged in
+ *       404:
+ *         description: Blog not found
+ */
 // 创建评论
 exports.createComment = asyncHandler(async (req, res) => {
     // 添加用户ID到请求体
@@ -41,7 +134,49 @@ exports.createComment = asyncHandler(async (req, res) => {
     });
 });
 
-
+/**
+ * @swagger
+ * /api/comments/reply:
+ *   post:
+ *     summary: Reply to an existing comment
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *               - commentId
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Content of the reply
+ *               commentId:
+ *                 type: string
+ *                 description: ID of the comment to reply to
+ *               replyTo:
+ *                 type: string
+ *                 description: ID of the user being replied to (optional)
+ *     responses:
+ *       200:
+ *         description: Reply created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Comment to reply to does not exist
+ */
 // 回复评论
 exports.replyToComment = asyncHandler(async (req, res) => {
     // 添加用户ID到请求体
@@ -93,6 +228,45 @@ exports.replyToComment = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @swagger
+ * /api/comments:
+ *   post:
+ *     summary: Get all comments for a blog post
+ *     tags: [Comments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - blogId
+ *             properties:
+ *               blogId:
+ *                 type: string
+ *                 description: ID of the blog post
+ *     responses:
+ *       200:
+ *         description: List of comments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                   description: Number of comments
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Blog not found
+ */
 // 获取博客的所有评论
 exports.getBlogComments = asyncHandler(async (req, res) => {
     const blogId = req.body.blogId;
@@ -160,6 +334,38 @@ exports.getBlogComments = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @swagger
+ * /api/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the comment to delete
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 评论已删除
+ *       400:
+ *         description: Comment doesn't exist or user doesn't have permission
+ */
 // 删除评论
 exports.deleteComment = asyncHandler(async (req, res) => {
     const comment = await Comment.findById(req.params.commentId);
@@ -192,6 +398,47 @@ exports.deleteComment = asyncHandler(async (req, res) => {
         message: '评论已删除'
     });
 });
+
+/**
+ * @swagger
+ * /api/comments/like:
+ *   post:
+ *     summary: Like or unlike a comment
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - commentId
+ *             properties:
+ *               commentId:
+ *                 type: string
+ *                 description: ID of the comment to like/unlike
+ *     responses:
+ *       200:
+ *         description: Like status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 点赞成功
+ *                 likeCount:
+ *                   type: integer
+ *                   description: Updated like count
+ *       404:
+ *         description: Comment not found
+ */
 // 点赞评论
 exports.likeComment = asyncHandler(async (req, res) => {
     const comment = await Comment.findById(req.body.commentId);
