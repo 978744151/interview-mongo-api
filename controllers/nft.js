@@ -153,7 +153,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         });
     }
 
-    const { name, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
+    const { name,id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
 
     // 创建基本NFT
     const nftData = {
@@ -166,7 +166,8 @@ exports.createNFT = asyncHandler(async (req, res) => {
         quantity,
         soldQty: '0',
         category: categoryId,
-        owner: req.user.id
+        owner: req.user.id,
+        id
     };
 
     // 处理版本/编号数据
@@ -180,7 +181,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
                 sub_id,
                 owner: req.user.id, // 初始拥有者是创建者
                 status: edition.status || 1,  // 默认未寄售
-                blockchain_id: edition.blockchain_id || `${name}-${sub_id}-${Date.now()}` // 默认生成区块链ID
+                blockchain_id: edition.blockchain_id || `${id}-${sub_id}-${Date.now()}` // 默认生成区块链ID
             };
         });
     } else {
@@ -196,7 +197,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
                 status: 1, // 默认未寄售
                 statusStr: '未寄售',
                 price,
-                blockchain_id: `${name}-${sub_id}-${Date.now()}`
+                blockchain_id: `${id}-${sub_id}-${Date.now()}`
             });
         }
     }
