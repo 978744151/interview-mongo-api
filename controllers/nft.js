@@ -104,24 +104,26 @@ const asyncHandler = require("../middleware/async");
  *                   type: object
  */
 // 获取NFT列表（支持分类过滤）
+// ... existing code ...
 exports.getNFTs = asyncHandler(async (req, res) => {
     const { category } = req.query;
     const query = {};
 
-    if (category) {
+    // 只有当 category 有值且不为空字符串时才加到查询条件
+    if (category && category !== "") {
         query.category = category;
     }
 
     const nfts = await NFT.find(query)
         .populate('category', 'name')
         .populate('owner', 'name email');
-
+    res.advancedResults.data = nfts
     res.status(200).json({
         success: true,
-        data: { ...res.advancedResults }
+        data: res.advancedResults
     });
 });
-
+// ... existing code ...
 /**
  * @swagger
  * /nfts:
@@ -153,7 +155,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         });
     }
 
-    const { name,id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
+    const { name, id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
 
     // 创建基本NFT
     const nftData = {
@@ -188,7 +190,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         // 如果未提供editions，则根据quantity自动生成
         const editionsCount = parseInt(quantity) || 1;
         nftData.editions = [];
-        
+
         for (let i = 1; i <= editionsCount; i++) {
             const sub_id = String(i).padStart(3, '0');
             nftData.editions.push({
@@ -242,7 +244,7 @@ exports.getNFT = asyncHandler(async (req, res) => {
             message: 'NFT未找到'
         });
     }
-    
+
     const nftObj = nft.toObject();
     nftObj.id = nft._id;
 
@@ -302,7 +304,7 @@ exports.updateNFT = asyncHandler(async (req, res) => {
 
     // 只允许更新基本信息，不允许直接更新editions
     const { editions, ...updateData } = req.body;
-    
+
     nft = await NFT.findByIdAndUpdate(req.params.id, updateData, {
         new: true,
         runValidators: true
@@ -394,16 +396,16 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
 
     // 更新状态和其他可修改的字段
     const { status, price, shop_id } = req.body;
-    
+
     if (status !== undefined) {
         nft.editions[editionIndex].status = status;
         // statusStr会通过pre-save钩子自动更新
     }
-    
+
     if (price !== undefined) {
         nft.editions[editionIndex].price = price;
     }
-    
+
     if (shop_id !== undefined) {
         nft.editions[editionIndex].shop_id = shop_id;
     }
@@ -416,11 +418,11 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
             to: req.body.buyer || "Unknown",
             price: price || nft.editions[editionIndex].price
         };
-        
+
         if (!nft.editions[editionIndex].transaction_history) {
             nft.editions[editionIndex].transaction_history = [];
         }
-        
+
         nft.editions[editionIndex].transaction_history.push(history);
     }
 
@@ -479,7 +481,7 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
 // 转移NFT版本所有权
 exports.transferNFTEdition = asyncHandler(async (req, res) => {
     const { newOwnerId, price } = req.body;
-    
+
     if (!newOwnerId) {
         return res.status(400).json({
             success: false,
@@ -524,23 +526,23 @@ exports.transferNFTEdition = asyncHandler(async (req, res) => {
         to: newOwnerId,
         price: price || edition.price
     };
-    
+
     if (!nft.editions[editionIndex].transaction_history) {
         nft.editions[editionIndex].transaction_history = [];
     }
-    
+
     nft.editions[editionIndex].transaction_history.push(history);
-    
+
     // 更新所有者
     nft.editions[editionIndex].owner = newOwnerId;
-    
+
     // 更新状态为"已售出"
     nft.editions[editionIndex].status = 4;
-    
+
     // 更新售出数量
     const soldQty = parseInt(nft.soldQty || '0') + 1;
     nft.soldQty = soldQty.toString();
-    
+
     await nft.save();
 
     res.status(200).json({
@@ -632,7 +634,7 @@ exports.getUserNFTs = asyncHandler(async (req, res) => {
 
     // 合并结果并去重
     const allNFTs = [...ownedNFTs];
-    
+
     // 只添加未包含在ownedNFTs中的NFT
     editionOwnedNFTs.forEach(nft => {
         if (!allNFTs.find(n => n._id.toString() === nft._id.toString())) {
@@ -643,12 +645,12 @@ exports.getUserNFTs = asyncHandler(async (req, res) => {
     // 处理结果
     const processedNFTs = allNFTs.map(nft => {
         const nftObj = nft.toObject();
-        
+
         // 筛选出该用户拥有的版本
         nftObj.userOwnedEditions = nft.editions.filter(
             edition => edition.owner.toString() === req.params.userId
         );
-        
+
         return nftObj;
     });
 
@@ -680,12 +682,12 @@ exports.getAvailableNFTs = asyncHandler(async (req, res) => {
     // 处理结果，只返回寄售中的版本
     const processedNFTs = availableNFTs.map(nft => {
         const nftObj = nft.toObject();
-        
+
         // 筛选出寄售中的版本
         nftObj.availableEditions = nft.editions.filter(
             edition => edition.status === 2
         );
-        
+
         return {
             _id: nft._id,
             name: nft.name,

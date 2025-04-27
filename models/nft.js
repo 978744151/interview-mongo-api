@@ -151,7 +151,7 @@ const NFTSchema = new mongoose.Schema({
     category: {
         type: mongoose.Schema.ObjectId,
         ref: 'NFTCategory',
-        required: true
+        required: false
     },
     imageUrl: {
         type: String,
