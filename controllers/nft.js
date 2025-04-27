@@ -66,7 +66,7 @@ const asyncHandler = require("../middleware/async");
  *               status:
  *                 type: number
  *                 enum: [1, 2, 3, 4]
- *                 description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出)
+ *                 description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出,5: 已发布,6: 空投,7: 合成)
  *               statusStr:
  *                 type: string
  *                 description: 状态描述
@@ -703,5 +703,398 @@ exports.getAvailableNFTs = asyncHandler(async (req, res) => {
         success: true,
         count: processedNFTs.length,
         data: processedNFTs
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/{id}/publish:
+ *   post:
+ *     summary: 发布NFT供用户购买
+ *     tags: [NFT]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: NFT ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               price:
+ *                 type: string
+ *                 description: 发布价格(可选，默认使用NFT基础价格)
+ *               editionIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 要发布的版本ID(可选，默认全部发布)
+ *     responses:
+ *       200:
+ *         description: NFT发布成功
+ *       403:
+ *         description: 无权发布该NFT
+ *       404:
+ *         description: NFT未找到
+ */
+exports.publishNFT = asyncHandler(async (req, res) => {
+    const { price, editionIds } = req.body;
+    
+    let nft = await NFT.findById(req.params.id);
+    
+    if (!nft) {
+        return res.status(404).json({
+            success: false,
+            message: 'NFT未找到'
+        });
+    }
+    
+    // 验证操作者是管理员或所有者
+    if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: '无权发布该NFT'
+        });
+    }
+    
+    // 确定要发布的版本
+    let editionsToPublish = nft.editions;
+    if (editionIds && Array.isArray(editionIds) && editionIds.length > 0) {
+        editionsToPublish = nft.editions.filter(edition => 
+            editionIds.includes(edition.sub_id) && 
+            [1, 3].includes(edition.status) // 只能发布"未寄售"或"锁定中"的版本
+        );
+    } else {
+        // 默认发布所有未售出的版本
+        editionsToPublish = nft.editions.filter(edition => 
+            [1, 3].includes(edition.status)
+        );
+    }
+    
+    if (editionsToPublish.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: '没有可发布的NFT版本'
+        });
+    }
+    
+    // 更新版本状态为"已发布"
+    editionsToPublish.forEach(edition => {
+        const editionIndex = nft.editions.findIndex(e => e.sub_id === edition.sub_id);
+        if (editionIndex !== -1) {
+            nft.editions[editionIndex].status = 5; // 设置为已发布状态
+            if (price) {
+                nft.editions[editionIndex].price = price;
+            }
+        }
+    });
+    
+    await nft.save();
+    
+    res.status(200).json({
+        success: true,
+        message: `成功发布 ${editionsToPublish.length} 个NFT版本`,
+        data: nft
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/published:
+ *   get:
+ *     summary: 获取所有已发布供用户购买的NFT
+ *     tags: [NFT]
+ *     responses:
+ *       200:
+ *         description: 成功获取已发布的NFT列表
+ */
+exports.getPublishedNFTs = asyncHandler(async (req, res) => {
+    // 查找包含已发布(status=5)版本的NFT
+    const publishedNFTs = await NFT.find({ 'editions.status': 5 })
+        .populate('category', 'name')
+        .populate('owner', 'name email')
+        .populate('editions.owner', 'name email');
+    
+    // 处理结果，只返回已发布的版本
+    const processedNFTs = publishedNFTs.map(nft => {
+        const nftObj = nft.toObject();
+        
+        // 筛选出已发布的版本
+        nftObj.publishedEditions = nft.editions.filter(
+            edition => edition.status === 5
+        );
+        
+        return {
+            _id: nft._id,
+            name: nft.name,
+            description: nft.description,
+            imageUrl: nft.imageUrl,
+            author: nft.author,
+            category: nft.category,
+            price: nft.price,
+            publishedEditions: nftObj.publishedEditions
+        };
+    });
+    
+    res.status(200).json({
+        success: true,
+        count: processedNFTs.length,
+        data: processedNFTs
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/{id}/editions/{subId}/purchase:
+ *   post:
+ *     summary: 用户购买已发布的NFT
+ *     tags: [NFT]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: NFT ID
+ *       - in: path
+ *         name: subId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: NFT子ID/编号
+ *     responses:
+ *       200:
+ *         description: NFT购买成功
+ *       400:
+ *         description: 该NFT不可购买或余额不足
+ *       404:
+ *         description: NFT或版本未找到
+ */
+exports.purchaseNFT = asyncHandler(async (req, res) => {
+    let nft = await NFT.findById(req.params.id)
+        .populate('owner', 'name email');
+    
+    if (!nft) {
+        return res.status(404).json({
+            success: false,
+            message: 'NFT未找到'
+        });
+    }
+    
+    // 查找对应的版本
+    const editionIndex = nft.editions.findIndex(
+        edition => edition.sub_id === req.params.subId
+    );
+    
+    if (editionIndex === -1) {
+        return res.status(404).json({
+            success: false,
+            message: 'NFT版本未找到'
+        });
+    }
+    
+    const edition = nft.editions[editionIndex];
+    
+    // 验证NFT状态是否为已发布
+    if (edition.status !== 5) {
+        return res.status(400).json({
+            success: false,
+            message: '该NFT不可购买，当前状态: ' + edition.statusStr
+        });
+    }
+    
+    // 这里添加用户余额验证和扣款逻辑
+    // const user = await User.findById(req.user.id);
+    // if (user.balance < edition.price) {
+    //     return res.status(400).json({
+    //         success: false,
+    //         message: '余额不足'
+    //     });
+    // }
+    // 扣款逻辑...
+    
+    // 记录交易历史
+    const history = {
+        date: new Date(),
+        from: edition.owner.toString(),
+        to: req.user.id,
+        price: edition.price
+    };
+    
+    if (!nft.editions[editionIndex].transaction_history) {
+        nft.editions[editionIndex].transaction_history = [];
+    }
+    
+    nft.editions[editionIndex].transaction_history.push(history);
+    
+    // 更新所有者
+    nft.editions[editionIndex].owner = req.user.id;
+    
+    // 更新状态为"未寄售"
+    nft.editions[editionIndex].status = 1;
+    
+    // 更新售出数量
+    const soldQty = parseInt(nft.soldQty || '0') + 1;
+    nft.soldQty = soldQty.toString();
+    
+    await nft.save();
+    
+    res.status(200).json({
+        success: true,
+        message: 'NFT购买成功',
+        data: nft.editions[editionIndex]
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/{id}/airdrop:
+ *   post:
+ *     summary: 向用户空投NFT
+ *     tags: [NFT]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: NFT ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userIds
+ *               - editionIds
+ *             properties:
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 接收空投的用户ID列表
+ *               editionIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 要空投的版本ID列表
+ *     responses:
+ *       200:
+ *         description: NFT空投成功
+ *       403:
+ *         description: 无权空投该NFT
+ *       404:
+ *         description: NFT未找到
+ */
+exports.airdropNFT = asyncHandler(async (req, res) => {
+    const { userIds, editionIds } = req.body;
+    
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: '需要提供接收空投的用户ID'
+        });
+    }
+    
+    if (!editionIds || !Array.isArray(editionIds) || editionIds.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: '需要提供要空投的NFT版本ID'
+        });
+    }
+    
+    let nft = await NFT.findById(req.params.id);
+    
+    if (!nft) {
+        return res.status(404).json({
+            success: false,
+            message: 'NFT未找到'
+        });
+    }
+    
+    // 验证操作者是管理员或所有者
+    if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: '无权空投该NFT'
+        });
+    }
+    
+    // 确定要空投的版本
+    const editionsToAirdrop = nft.editions.filter(edition => 
+        editionIds.includes(edition.sub_id) && 
+        [1, 3, 5].includes(edition.status) // 只能空投未寄售、锁定中或已发布的版本
+    );
+    
+    if (editionsToAirdrop.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: '没有可空投的NFT版本'
+        });
+    }
+    
+    // 如果要空投的版本少于用户数量，返回错误
+    if (editionsToAirdrop.length < userIds.length) {
+        return res.status(400).json({
+            success: false,
+            message: `可空投的NFT版本(${editionsToAirdrop.length}个)少于用户数量(${userIds.length}个)`
+        });
+    }
+    
+    // 为每个用户分配NFT版本
+    const airdropResults = [];
+    for (let i = 0; i < userIds.length; i++) {
+        const userId = userIds[i];
+        const edition = editionsToAirdrop[i];
+        
+        const editionIndex = nft.editions.findIndex(e => e.sub_id === edition.sub_id);
+        
+        // 记录交易历史
+        const history = {
+            date: new Date(),
+            from: edition.owner.toString(),
+            to: userId,
+            price: "0", // 空投价格为0
+            type: "airdrop"
+        };
+        
+        if (!nft.editions[editionIndex].transaction_history) {
+            nft.editions[editionIndex].transaction_history = [];
+        }
+        
+        nft.editions[editionIndex].transaction_history.push(history);
+        
+        // 更新所有者和状态
+        nft.editions[editionIndex].owner = userId;
+        nft.editions[editionIndex].status = 6; // 设置为空投状态
+        
+        airdropResults.push({
+            user: userId,
+            edition: edition.sub_id
+        });
+    }
+    
+    // 更新空投数量
+    const soldQty = parseInt(nft.soldQty || '0') + airdropResults.length;
+    nft.soldQty = soldQty.toString();
+    
+    await nft.save();
+    
+    res.status(200).json({
+        success: true,
+        message: `成功空投 ${airdropResults.length} 个NFT版本`,
+        data: airdropResults
     });
 });

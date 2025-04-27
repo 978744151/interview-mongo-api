@@ -208,6 +208,15 @@ NFTSchema.pre('save', function(next) {
                 case 4:
                     edition.statusStr = "已售出";
                     break;
+                case 5:
+                    edition.statusStr = "已发布";
+                    break;
+                case 6:
+                    edition.statusStr = "空投";
+                    break;
+                case 7:
+                    edition.statusStr = "合成";
+                    break;
                 default:
                     edition.statusStr = "未知状态";
             }
