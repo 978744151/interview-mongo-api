@@ -122,8 +122,6 @@ exports.register = asyncHandler(async (req, res, next) => {
  *         description: 登录成功并返回token
  *       400:
  *         description: 邮箱格式不正确或缺少必要字段
- *       401:
- *         description: 密码错误
  */
 exports.login = asyncHandler(async (req, res, next) => {
   const { email, password, name } = req.body;
@@ -271,7 +269,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   //  密码匹配
   const isMatch = await user.matchPassword(password);
   if (!isMatch) {
-    return next(new ErrorResponse("密码错误", 401));
+    return next(new ErrorResponse("密码错误", 400));
   }
   // 生成token;
   sendTokenResponse(user, 200, res);

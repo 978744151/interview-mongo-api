@@ -66,7 +66,7 @@ const asyncHandler = require("../middleware/async");
  *               status:
  *                 type: number
  *                 enum: [1, 2, 3, 4]
- *                 description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出,5: 已发布,6: 空投,7: 合成)
+ *                 description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出, 5:已发布, 6:空投, 7:合成)
  *               statusStr:
  *                 type: string
  *                 description: 状态描述
@@ -90,6 +90,12 @@ const asyncHandler = require("../middleware/async");
  *         schema:
  *           type: string
  *         description: 按分类筛选
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: number
+ *           enum: [1, 2, 3, 4, 5, 6, 7, 8]
+ *         description: 按状态筛选(1:未发布, 2:已发布, 3:已售罄, 4:已下架, 5:限时发售, 6:预售, 7:热卖中, 8:即将售罄)
  *     responses:
  *       200:
  *         description: 成功获取NFT列表
@@ -103,25 +109,40 @@ const asyncHandler = require("../middleware/async");
  *                 data:
  *                   type: object
  */
-// 获取NFT列表（支持分类过滤）
-// ... existing code ...
+// 获取NFT列表（支持分类和状态过滤）
 exports.getNFTs = asyncHandler(async (req, res) => {
-    const { category } = req.query;
-    const query = {};
+    try {
+        const { category, status } = req.query;
+        const query = {};
 
-    // 只有当 category 有值且不为空字符串时才加到查询条件
-    if (category && category !== "") {
-        query.category = category;
+        // 只有当 category 有值且不为空字符串时才加到查询条件
+        if (category && category !== "") {
+            query.category = category;
+        }
+
+        // 如果指定了状态，添加到查询条件
+        if (status && !isNaN(parseInt(status))) {
+            const statusNum = parseInt(status);
+            // 使用 $elemMatch 查询包含特定状态的版本
+            query['editions'] = {
+                $elemMatch: { status: statusNum }
+            };
+        }
+
+        const nfts = await NFT.find(query)
+            .populate('category', 'name')
+            .populate('owner', 'name email');
+        res.advancedResults.data = nfts
+        res.status(200).json({
+            success: true,
+            data: res.advancedResults
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: '获取NFT列表失败'
+        });
     }
-
-    const nfts = await NFT.find(query)
-        .populate('category', 'name')
-        .populate('owner', 'name email');
-    res.advancedResults.data = nfts
-    res.status(200).json({
-        success: true,
-        data: res.advancedResults
-    });
 });
 // ... existing code ...
 /**
@@ -141,7 +162,7 @@ exports.getNFTs = asyncHandler(async (req, res) => {
  *     responses:
  *       200:
  *         description: NFT创建成功
- *       404:
+ *       400:
  *         description: 分类不存在
  */
 // 创建NFT
@@ -149,14 +170,27 @@ exports.createNFT = asyncHandler(async (req, res) => {
     // 验证分类是否存在
     const category = await NFTCategory.findById(req.body.category);
     if (!category) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: '分类不存在'
         });
     }
 
-    const { name, id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
-
+    const { name, _id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
+    // 确保状态码和状态描述同步更新
+    if (req.body.status) {
+        const statusMap = {
+            1: "未发布",
+            2: "已发布",
+            3: "已售罄",
+            4: "已下架",
+            5: "限时发售",
+            6: "预售",
+            7: "热卖中",
+            8: "即将售罄"
+        };
+        req.body.statusStr = statusMap[req.body.status] || "未知状态";
+    }
     // 创建基本NFT
     const nftData = {
         name,
@@ -169,7 +203,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         soldQty: '0',
         category: categoryId,
         owner: req.user.id,
-        id
+        _id
     };
 
     // 处理版本/编号数据
@@ -183,7 +217,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
                 sub_id,
                 owner: req.user.id, // 初始拥有者是创建者
                 status: edition.status || 1,  // 默认未寄售
-                blockchain_id: edition.blockchain_id || `${id}-${sub_id}-${Date.now()}` // 默认生成区块链ID
+                blockchain_id: edition.blockchain_id || `${_id}-${sub_id}-${Date.now()}` // 默认生成区块链ID
             };
         });
     } else {
@@ -199,7 +233,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
                 status: 1, // 默认未寄售
                 statusStr: '未寄售',
                 price,
-                blockchain_id: `${id}-${sub_id}-${Date.now()}`
+                blockchain_id: `${_id}-${sub_id}-${Date.now()}`
             });
         }
     }
@@ -228,7 +262,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
  *     responses:
  *       200:
  *         description: 成功获取NFT详情
- *       404:
+ *       400:
  *         description: NFT未找到
  */
 // 获取单个NFT
@@ -239,7 +273,7 @@ exports.getNFT = asyncHandler(async (req, res) => {
         .populate('editions.owner', 'name email');
 
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
@@ -280,7 +314,7 @@ exports.getNFT = asyncHandler(async (req, res) => {
  *         description: NFT更新成功
  *       403:
  *         description: 无权修改该NFT
- *       404:
+ *       400:
  *         description: NFT未找到
  */
 // 更新NFT
@@ -288,7 +322,7 @@ exports.updateNFT = asyncHandler(async (req, res) => {
     let nft = await NFT.findById(req.params.id);
 
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
@@ -301,7 +335,20 @@ exports.updateNFT = asyncHandler(async (req, res) => {
             message: '无权修改该NFT'
         });
     }
-
+    // 确保状态码和状态描述同步更新
+    if (req.body.status) {
+        const statusMap = {
+            1: "未发布",
+            2: "已发布",
+            3: "已售罄",
+            4: "已下架",
+            5: "限时发售",
+            6: "预售",
+            7: "热卖中",
+            8: "即将售罄"
+        };
+        req.body.statusStr = statusMap[req.body.status] || "未知状态";
+    }
     // 只允许更新基本信息，不允许直接更新editions
     const { editions, ...updateData } = req.body;
 
@@ -359,7 +406,7 @@ exports.updateNFT = asyncHandler(async (req, res) => {
  *         description: NFT版本更新成功
  *       403:
  *         description: 无权修改
- *       404:
+ *       400:
  *         description: NFT或版本未找到
  */
 // 更新NFT版本状态
@@ -367,7 +414,7 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
     let nft = await NFT.findById(req.params.id);
 
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
@@ -379,7 +426,7 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
     );
 
     if (editionIndex === -1) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT版本未找到'
         });
@@ -475,7 +522,7 @@ exports.updateNFTEdition = asyncHandler(async (req, res) => {
  *         description: NFT转移成功
  *       403:
  *         description: 无权转移
- *       404:
+ *       400:
  *         description: NFT或版本未找到
  */
 // 转移NFT版本所有权
@@ -492,7 +539,7 @@ exports.transferNFTEdition = asyncHandler(async (req, res) => {
     let nft = await NFT.findById(req.params.id);
 
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
@@ -504,7 +551,7 @@ exports.transferNFTEdition = asyncHandler(async (req, res) => {
     );
 
     if (editionIndex === -1) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT版本未找到'
         });
@@ -572,7 +619,7 @@ exports.transferNFTEdition = asyncHandler(async (req, res) => {
  *         description: NFT已删除
  *       403:
  *         description: 无权删除该NFT
- *       404:
+ *       400:
  *         description: NFT未找到
  */
 // 删除NFT
@@ -580,7 +627,7 @@ exports.deleteNFT = asyncHandler(async (req, res) => {
     const nft = await NFT.findById(req.params.id);
 
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
@@ -622,16 +669,19 @@ exports.deleteNFT = asyncHandler(async (req, res) => {
 // 获取用户拥有的NFT列表
 exports.getUserNFTs = asyncHandler(async (req, res) => {
     // 方法一：查找主所有者为指定用户的NFT
-    const ownedNFTs = await NFT.find({ owner: req.params.userId })
+
+    const userId = req.params?.userId || req.user.id;
+
+    const ownedNFTs = await NFT.find({ owner: userId })
         .populate('category', 'name')
         .populate('owner', 'name email');
 
     // 方法二：查找任何版本所有者为指定用户的NFT
-    const editionOwnedNFTs = await NFT.find({ 'editions.owner': req.params.userId })
+    const editionOwnedNFTs = await NFT.find({ 'editions.owner': userId })
         .populate('category', 'name')
         .populate('owner', 'name email')
         .populate('editions.owner', 'name email');
-
+    console.log('editionOwnedNFTs', editionOwnedNFTs)
     // 合并结果并去重
     const allNFTs = [...ownedNFTs];
 
@@ -648,9 +698,13 @@ exports.getUserNFTs = asyncHandler(async (req, res) => {
 
         // 筛选出该用户拥有的版本
         nftObj.userOwnedEditions = nft.editions.filter(
-            edition => edition.owner.toString() === req.params.userId
+            (edition) => {
+                console.log(edition.owner._id == userId)
+                return edition.owner._id == userId
+            }
         );
-
+        delete nftObj.editions;
+        console.log('nftObj.userOwnedEditions', nftObj.userOwnedEditions)
         return nftObj;
     });
 
@@ -674,10 +728,13 @@ exports.getUserNFTs = asyncHandler(async (req, res) => {
 // 获取所有可购买的NFT版本
 exports.getAvailableNFTs = asyncHandler(async (req, res) => {
     // 查找包含寄售中(status=2)版本的NFT
+    console.log('12212121121221212212112');
     const availableNFTs = await NFT.find({ 'editions.status': 2 })
         .populate('category', 'name')
         .populate('owner', 'name email')
         .populate('editions.owner', 'name email');
+
+
 
     // 处理结果，只返回寄售中的版本
     const processedNFTs = availableNFTs.map(nft => {
@@ -741,21 +798,21 @@ exports.getAvailableNFTs = asyncHandler(async (req, res) => {
  *         description: NFT发布成功
  *       403:
  *         description: 无权发布该NFT
- *       404:
+ *       400:
  *         description: NFT未找到
  */
 exports.publishNFT = asyncHandler(async (req, res) => {
     const { price, editionIds } = req.body;
-    
+
     let nft = await NFT.findById(req.params.id);
-    
+
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
     }
-    
+
     // 验证操作者是管理员或所有者
     if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
         return res.status(403).json({
@@ -763,28 +820,28 @@ exports.publishNFT = asyncHandler(async (req, res) => {
             message: '无权发布该NFT'
         });
     }
-    
+
     // 确定要发布的版本
     let editionsToPublish = nft.editions;
     if (editionIds && Array.isArray(editionIds) && editionIds.length > 0) {
-        editionsToPublish = nft.editions.filter(edition => 
-            editionIds.includes(edition.sub_id) && 
+        editionsToPublish = nft.editions.filter(edition =>
+            editionIds.includes(edition.sub_id) &&
             [1, 3].includes(edition.status) // 只能发布"未寄售"或"锁定中"的版本
         );
     } else {
         // 默认发布所有未售出的版本
-        editionsToPublish = nft.editions.filter(edition => 
+        editionsToPublish = nft.editions.filter(edition =>
             [1, 3].includes(edition.status)
         );
     }
-    
+
     if (editionsToPublish.length === 0) {
         return res.status(400).json({
             success: false,
             message: '没有可发布的NFT版本'
         });
     }
-    
+
     // 更新版本状态为"已发布"
     editionsToPublish.forEach(edition => {
         const editionIndex = nft.editions.findIndex(e => e.sub_id === edition.sub_id);
@@ -795,13 +852,128 @@ exports.publishNFT = asyncHandler(async (req, res) => {
             }
         }
     });
-    
+
     await nft.save();
-    
+
     res.status(200).json({
         success: true,
         message: `成功发布 ${editionsToPublish.length} 个NFT版本`,
         data: nft
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/publish-batch:
+ *   post:
+ *     summary: 批量发布多个NFT
+ *     tags: [NFT]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nftIds
+ *             properties:
+ *               nftIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 要发布的NFT ID列表
+ *               price:
+ *                 type: string
+ *                 description: 发布价格(可选，默认使用各NFT基础价格)
+ *     responses:
+ *       200:
+ *         description: NFT批量发布成功
+ *       403:
+ *         description: 无权发布某些NFT
+ *       400:
+ *         description: 部分NFT未找到
+ */
+exports.publishNFTBatch = asyncHandler(async (req, res) => {
+    const { nftIds, price } = req.body;
+
+    if (!nftIds || !Array.isArray(nftIds) || nftIds.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: '需要提供要发布的NFT ID列表'
+        });
+    }
+
+    const results = {
+        success: [],
+        failed: []
+    };
+
+    // 处理每个NFT
+    for (const nftId of nftIds) {
+        try {
+            let nft = await NFT.findById(nftId);
+
+            if (!nft) {
+                results.failed.push({
+                    id: nftId,
+                    reason: 'NFT未找到'
+                });
+                continue;
+            }
+
+            // 验证操作者是管理员或所有者
+            if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
+                results.failed.push({
+                    id: nftId,
+                    reason: '无权发布该NFT'
+                });
+                continue;
+            }
+
+            // 筛选可发布的版本
+            const editionsToPublish = nft.editions.filter(edition =>
+                [1, 3].includes(edition.status) // 只能发布"未寄售"或"锁定中"的版本
+            );
+
+            if (editionsToPublish.length === 0) {
+                results.failed.push({
+                    id: nftId,
+                    reason: '没有可发布的NFT版本'
+                });
+                continue;
+            }
+
+            // "已发布"(5)
+            editionsToPublish.forEach(edition => {
+                const editionIndex = nft.editions.findIndex(e => e.sub_id === edition.sub_id);
+                if (editionIndex !== -1) {
+                    nft.editions[editionIndex].status = 5; //
+                    if (price) {
+                        nft.editions[editionIndex].price = price;
+                    }
+                }
+            });
+
+            await nft.save();
+
+            results.success.push({
+                id: nftId,
+                publishedCount: editionsToPublish.length
+            });
+        } catch (error) {
+            results.failed.push({
+                id: nftId,
+                reason: error.message || '处理时发生错误'
+            });
+        }
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: `成功发布 ${results.success.length} 个NFT，失败 ${results.failed.length} 个`,
+        data: results
     });
 });
 
@@ -821,16 +993,16 @@ exports.getPublishedNFTs = asyncHandler(async (req, res) => {
         .populate('category', 'name')
         .populate('owner', 'name email')
         .populate('editions.owner', 'name email');
-    
+
     // 处理结果，只返回已发布的版本
     const processedNFTs = publishedNFTs.map(nft => {
         const nftObj = nft.toObject();
-        
+
         // 筛选出已发布的版本
         nftObj.publishedEditions = nft.editions.filter(
             edition => edition.status === 5
         );
-        
+
         return {
             _id: nft._id,
             name: nft.name,
@@ -842,7 +1014,7 @@ exports.getPublishedNFTs = asyncHandler(async (req, res) => {
             publishedEditions: nftObj.publishedEditions
         };
     });
-    
+
     res.status(200).json({
         success: true,
         count: processedNFTs.length,
@@ -876,42 +1048,49 @@ exports.getPublishedNFTs = asyncHandler(async (req, res) => {
  *         description: NFT购买成功
  *       400:
  *         description: 该NFT不可购买或余额不足
- *       404:
- *         description: NFT或版本未找到
+
  */
 exports.purchaseNFT = asyncHandler(async (req, res) => {
-    let nft = await NFT.findById(req.params.id)
+    const nftId = req.body.id;
+    const buyerId = req.user.id;
+
+    let nft = await NFT.findById(nftId)
         .populate('owner', 'name email');
-    
+
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
     }
-    
     // 查找对应的版本
-    const editionIndex = nft.editions.findIndex(
-        edition => edition.sub_id === req.params.subId
-    );
-    
-    if (editionIndex === -1) {
-        return res.status(404).json({
+    const availableEditions = nft.editions.filter(edition => edition.status === 5);
+    // const editionIndex = nft.editions.findIndex(
+    //     edition => edition.sub_id === req.body.subId
+    // );
+
+    if (availableEditions.length === 0) {
+        return res.status(403).json({
             success: false,
-            message: 'NFT版本未找到'
+            message: '该NFT暂无可购买的版本'
         });
     }
-    
-    const edition = nft.editions[editionIndex];
-    
-    // 验证NFT状态是否为已发布
-    if (edition.status !== 5) {
-        return res.status(400).json({
-            success: false,
-            message: '该NFT不可购买，当前状态: ' + edition.statusStr
-        });
-    }
-    
+
+    // 随机选择一个版本
+    const randomIndex = Math.floor(Math.random() * availableEditions.length);
+    const selectedEdition = availableEditions[randomIndex];
+
+    // 检查是否为自己购买自己
+    // if (selectedEdition.owner.toString() === buyerId) {
+    //     return res.status(403).json({
+    //         success: false,
+    //         message: '不能购买自己拥有的NFT版本'
+    //     });
+    // }
+
+    // 找到原数组中的索引
+    const editionIndex = nft.editions.findIndex(edition => edition.sub_id === selectedEdition.sub_id);
+
     // 这里添加用户余额验证和扣款逻辑
     // const user = await User.findById(req.user.id);
     // if (user.balance < edition.price) {
@@ -921,33 +1100,29 @@ exports.purchaseNFT = asyncHandler(async (req, res) => {
     //     });
     // }
     // 扣款逻辑...
-    
+
+
     // 记录交易历史
     const history = {
         date: new Date(),
-        from: edition.owner.toString(),
-        to: req.user.id,
-        price: edition.price
+        from: nft.editions[editionIndex].owner.toString(),
+        to: buyerId,
+        price: nft.editions[editionIndex].price
     };
-    
     if (!nft.editions[editionIndex].transaction_history) {
         nft.editions[editionIndex].transaction_history = [];
     }
-    
     nft.editions[editionIndex].transaction_history.push(history);
-    
-    // 更新所有者
-    nft.editions[editionIndex].owner = req.user.id;
-    
-    // 更新状态为"未寄售"
-    nft.editions[editionIndex].status = 1;
-    
+
+    // 更新所有者和状态
+    nft.editions[editionIndex].owner = buyerId;
+    nft.editions[editionIndex].status = 1; // 为寄售
+
     // 更新售出数量
-    const soldQty = parseInt(nft.soldQty || '0') + 1;
-    nft.soldQty = soldQty.toString();
-    
+    nft.soldQty = (parseInt(nft.soldQty || '0') + 1).toString();
+
     await nft.save();
-    
+
     res.status(200).json({
         success: true,
         message: 'NFT购买成功',
@@ -995,35 +1170,35 @@ exports.purchaseNFT = asyncHandler(async (req, res) => {
  *         description: NFT空投成功
  *       403:
  *         description: 无权空投该NFT
- *       404:
+ *       400:
  *         description: NFT未找到
  */
 exports.airdropNFT = asyncHandler(async (req, res) => {
     const { userIds, editionIds } = req.body;
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({
             success: false,
             message: '需要提供接收空投的用户ID'
         });
     }
-    
+
     if (!editionIds || !Array.isArray(editionIds) || editionIds.length === 0) {
         return res.status(400).json({
             success: false,
             message: '需要提供要空投的NFT版本ID'
         });
     }
-    
+
     let nft = await NFT.findById(req.params.id);
-    
+
     if (!nft) {
-        return res.status(404).json({
+        return res.status(400).json({
             success: false,
             message: 'NFT未找到'
         });
     }
-    
+
     // 验证操作者是管理员或所有者
     if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
         return res.status(403).json({
@@ -1031,20 +1206,20 @@ exports.airdropNFT = asyncHandler(async (req, res) => {
             message: '无权空投该NFT'
         });
     }
-    
+
     // 确定要空投的版本
-    const editionsToAirdrop = nft.editions.filter(edition => 
-        editionIds.includes(edition.sub_id) && 
+    const editionsToAirdrop = nft.editions.filter(edition =>
+        editionIds.includes(edition.sub_id) &&
         [1, 3, 5].includes(edition.status) // 只能空投未寄售、锁定中或已发布的版本
     );
-    
+
     if (editionsToAirdrop.length === 0) {
         return res.status(400).json({
             success: false,
             message: '没有可空投的NFT版本'
         });
     }
-    
+
     // 如果要空投的版本少于用户数量，返回错误
     if (editionsToAirdrop.length < userIds.length) {
         return res.status(400).json({
@@ -1052,15 +1227,15 @@ exports.airdropNFT = asyncHandler(async (req, res) => {
             message: `可空投的NFT版本(${editionsToAirdrop.length}个)少于用户数量(${userIds.length}个)`
         });
     }
-    
+
     // 为每个用户分配NFT版本
     const airdropResults = [];
     for (let i = 0; i < userIds.length; i++) {
         const userId = userIds[i];
         const edition = editionsToAirdrop[i];
-        
+
         const editionIndex = nft.editions.findIndex(e => e.sub_id === edition.sub_id);
-        
+
         // 记录交易历史
         const history = {
             date: new Date(),
@@ -1069,32 +1244,141 @@ exports.airdropNFT = asyncHandler(async (req, res) => {
             price: "0", // 空投价格为0
             type: "airdrop"
         };
-        
+
         if (!nft.editions[editionIndex].transaction_history) {
             nft.editions[editionIndex].transaction_history = [];
         }
-        
+
         nft.editions[editionIndex].transaction_history.push(history);
-        
+
         // 更新所有者和状态
         nft.editions[editionIndex].owner = userId;
         nft.editions[editionIndex].status = 6; // 设置为空投状态
-        
+
         airdropResults.push({
             user: userId,
             edition: edition.sub_id
         });
     }
-    
+
     // 更新空投数量
     const soldQty = parseInt(nft.soldQty || '0') + airdropResults.length;
     nft.soldQty = soldQty.toString();
-    
+
     await nft.save();
-    
+
     res.status(200).json({
         success: true,
         message: `成功空投 ${airdropResults.length} 个NFT版本`,
         data: airdropResults
+    });
+});
+
+/**
+ * @swagger
+ * /nfts/{id}/synthetic-airdrop:
+ *   post:
+ *     summary: 发布NFT的合成空投
+ *     tags: [NFT]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: NFT ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: number
+ *                 description: 要生成的合成空投数量
+ *               price:
+ *                 type: number
+ *                 description: 合成空投的价格
+ *     responses:
+ *       200:
+ *         description: 合成空投发布成功
+ *       403:
+ *         description: 无权发布合成空投
+ *       400:
+ *         description: NFT未找到
+ */
+exports.syntheticAirdropNFT = asyncHandler(async (req, res) => {
+    const { quantity, price } = req.body;
+
+    if (!quantity || quantity <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: '需要提供有效的空投数量'
+        });
+    }
+
+    let nft = await NFT.findById(req.params.id);
+
+    if (!nft) {
+        return res.status(400).json({
+            success: false,
+            message: 'NFT未找到'
+        });
+    }
+
+    // 验证操作者是管理员或所有者
+    if (nft.owner.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: '无权发布该NFT的合成空投'
+        });
+    }
+
+    // 获取当前最大版本号
+    let maxSubId = 0;
+    nft.editions.forEach(edition => {
+        const currentSubId = parseInt(edition.sub_id);
+        if (!isNaN(currentSubId) && currentSubId > maxSubId) {
+            maxSubId = currentSubId;
+        }
+    });
+
+    // 创建新的合成空投版本
+    const syntheticEditions = [];
+    for (let i = 1; i <= quantity; i++) {
+        const newSubId = String(maxSubId + i).padStart(3, '0');
+
+        const syntheticEdition = {
+            sub_id: newSubId,
+            status: 7, // 合成空投状态
+            statusStr: '合成空投',
+            price: price || nft.price,
+            owner: nft.owner, // 初始所有者是NFT创建者
+            blockchain_id: `${nft._id}-${newSubId}-synthetic-${Date.now()}`,
+            created_at: new Date()
+        };
+
+        syntheticEditions.push(syntheticEdition);
+        nft.editions.push(syntheticEdition);
+    }
+
+    // 更新NFT总量
+    const totalQuantity = parseInt(nft.quantity || '0') + quantity;
+    nft.quantity = totalQuantity.toString();
+
+    await nft.save();
+
+    res.status(200).json({
+        success: true,
+        message: `成功创建 ${quantity} 个合成空投版本`,
+        data: {
+            nftId: nft._id,
+            syntheticEditions
+        }
     });
 });

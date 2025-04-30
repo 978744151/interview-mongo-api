@@ -15,8 +15,8 @@ const mongoose = require('mongoose');
  *           description: 商店ID
  *         status:
  *           type: number
- *           enum: [1, 2, 3, 4]
- *           description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出)
+ *           enum: [1, 2, 3, 4, 5, 6, 7]
+ *           description: 状态码(1:未寄售, 2:寄售中, 3:锁定中, 4:已售出, 5:已发布, 6:空投, 7:合成)
  *         statusStr:
  *           type: string
  *           description: 状态描述
@@ -55,7 +55,7 @@ const NFTEditionSchema = new mongoose.Schema({
     },
     status: {
         type: Number,
-        enum: [1, 2, 3, 4],
+        enum: [1, 2, 3, 4, 5, 6, 7],
         default: 1
     },
     statusStr: {
@@ -131,6 +131,13 @@ const NFTEditionSchema = new mongoose.Schema({
  *         category:
  *           type: string
  *           description: 分类ID
+ *         status:
+ *           type: number
+ *           enum: [1, 2, 3, 4, 5, 6, 7, 8]
+ *           description: NFT整体状态码(1:未发布, 2:已发布, 3:已售罄, 4:已下架, 5:限时发售, 6:预售, 7:热卖中, 8:即将售罄)
+ *         statusStr:
+ *           type: string
+ *           description: NFT整体状态描述
  *         editions:
  *           type: array
  *           items:
@@ -176,6 +183,16 @@ const NFTSchema = new mongoose.Schema({
         type: String,
         required: [false, '请输入NFT流通数量']
     },
+    status: {
+        type: Number,
+        enum: [1, 2, 3, 4, 5, 6, 7, 8],
+        default: 1
+    },
+    statusStr: {
+        type: String,
+        enum: ["未发布", "已发布", "已售罄", "已下架", "限时发售", "预售", "热卖中", "即将售罄", "未知状态"],
+        default: "未发布"
+    },
     // 主要NFT拥有者，通常是最初的创建者
     owner: {
         type: mongoose.Schema.ObjectId,
@@ -191,11 +208,42 @@ const NFTSchema = new mongoose.Schema({
 });
 
 // 方法：根据状态值自动设置状态描述
-NFTSchema.pre('save', function(next) {
+NFTSchema.pre('save', function (next) {
+    console.log('this.status', this.status)
+    // 设置NFT整体状态描述
+    switch (this.status) {
+        case 1:
+            this.statusStr = "未发布";
+            break;
+        case 2:
+            this.statusStr = "已发布";
+            break;
+        case 3:
+            this.statusStr = "已售罄";
+            break;
+        case 4:
+            this.statusStr = "已下架";
+            break;
+        case 5:
+            this.statusStr = "限时发售";
+            break;
+        case 6:
+            this.statusStr = "预售";
+            break;
+        case 7:
+            this.statusStr = "热卖中";
+            break;
+        case 8:
+            this.statusStr = "即将售罄";
+            break;
+        default:
+            this.statusStr = "未知状态";
+    }
+
     // 确保editions数组中的每一项都有正确的statusStr
     if (this.editions && this.editions.length > 0) {
         this.editions.forEach(edition => {
-            switch(edition.status) {
+            switch (edition.status) {
                 case 1:
                     edition.statusStr = "未寄售";
                     break;
