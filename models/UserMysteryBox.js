@@ -6,9 +6,6 @@ const mongoose = require('mongoose');
  *   schemas:
  *     UserMysteryBox:
  *       type: object
- *       required:
- *         - user
- *         - mysteryBox
  *       properties:
  *         user:
  *           type: string
@@ -16,27 +13,15 @@ const mongoose = require('mongoose');
  *         mysteryBox:
  *           type: string
  *           description: 盲盒ID
- *         isOpened:
+ *         opened:
  *           type: boolean
  *           description: 是否已开启
- *         receivedNFT:
+ *         nftReceived:
  *           type: string
  *           description: 获得的NFT ID
- *         purchasedAt:
+ *         editionReceived:
  *           type: string
- *           format: date-time
- *           description: 购买时间
- *         openedAt:
- *           type: string
- *           format: date-time
- *           description: 开启时间
- *       example:
- *         user: "5d7a514b5d2c12c7449be042"
- *         mysteryBox: "6d713995b721c3bb38c1f601"
- *         isOpened: false
- *         receivedNFT: null
- *         purchasedAt: "2023-06-15T08:00:00.000Z"
- *         openedAt: null
+ *           description: 获得的NFT版本ID
  */
 const UserMysteryBoxSchema = new mongoose.Schema({
     user: {
@@ -49,22 +34,23 @@ const UserMysteryBoxSchema = new mongoose.Schema({
         ref: 'MysteryBox',
         required: true
     },
-    isOpened: {
+    opened: {
         type: Boolean,
         default: false
     },
-    receivedNFT: {
+    nftReceived: {
         type: mongoose.Schema.ObjectId,
-        ref: 'NFT',
-        default: null
+        ref: 'NFT'
+    },
+    editionReceived: {
+        type: String
     },
     purchasedAt: {
         type: Date,
         default: Date.now
     },
     openedAt: {
-        type: Date,
-        default: null
+        type: Date
     }
 });
 

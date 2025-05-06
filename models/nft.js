@@ -92,6 +92,27 @@ const NFTEditionSchema = new mongoose.Schema({
     ]
 }, { timestamps: true });
 
+// 盲盒包含的NFT项
+const MysteryBoxItemSchema = new mongoose.Schema({
+    nft: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'NFT',
+        required: true
+    },
+    weight: {
+        type: Number,
+        required: true,
+        default: 1,
+        min: 1
+    },
+    quantity: {
+        type: Number,
+        required: true,
+        default: 1,
+        min: 1
+    }
+});
+
 /**
  * @swagger
  * components:
@@ -131,6 +152,13 @@ const NFTEditionSchema = new mongoose.Schema({
  *         category:
  *           type: string
  *           description: 分类ID
+ *         type:
+ *           type: number
+ *           enum: [1, 2]
+ *           description: 主分类类型(1:普通NFT, 2:盲盒)
+ *         typeStr:
+ *           type: string
+ *           description: 主分类类型描述
  *         status:
  *           type: number
  *           enum: [1, 2, 3, 4, 5, 6, 7, 8]
@@ -143,6 +171,27 @@ const NFTEditionSchema = new mongoose.Schema({
  *           items:
  *             $ref: '#/components/schemas/NFTEdition'
  *           description: NFT的不同版本/编号
+ *         mysteryBoxItems:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               nft:
+ *                 type: string
+ *                 description: 盲盒包含的NFT ID
+ *               weight:
+ *                 type: number
+ *                 description: 该NFT的权重/概率
+ *               quantity:
+ *                 type: number
+ *                 description: 该NFT的数量
+ *           description: 盲盒包含的NFT列表(仅当type=2时有效)
+ *         openLimit:
+ *           type: number
+ *           description: 盲盒开启次数限制(仅当type=2时有效)
+ *         openedCount:
+ *           type: number
+ *           description: 已开启次数(仅当type=2时有效)
  */
 
 const NFTSchema = new mongoose.Schema({
@@ -183,6 +232,17 @@ const NFTSchema = new mongoose.Schema({
         type: String,
         required: [false, '请输入NFT流通数量']
     },
+    type: {
+        type: Number,
+        enum: [1, 2],
+        default: 1,
+        description: '主分类类型(1:普通NFT, 2:盲盒)'
+    },
+    typeStr: {
+        type: String,
+        enum: ["普通NFT", "盲盒"],
+        default: "普通NFT"
+    },
     status: {
         type: Number,
         enum: [1, 2, 3, 4, 5, 6, 7, 8],
@@ -201,6 +261,18 @@ const NFTSchema = new mongoose.Schema({
     },
     // NFT的不同版本(子ID)
     editions: [NFTEditionSchema],
+    // 盲盒相关字段
+    mysteryBoxItems: [MysteryBoxItemSchema],
+    openLimit: {
+        type: Number,
+        default: 0,
+        description: '盲盒开启次数限制，0表示无限制'
+    },
+    openedCount: {
+        type: Number,
+        default: 0,
+        description: '已开启次数'
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -210,6 +282,19 @@ const NFTSchema = new mongoose.Schema({
 // 方法：根据状态值自动设置状态描述
 NFTSchema.pre('save', function (next) {
     console.log('this.status', this.status)
+
+    // 设置NFT类型描述
+    switch (this.type) {
+        case 1:
+            this.typeStr = "普通NFT";
+            break;
+        case 2:
+            this.typeStr = "盲盒";
+            break;
+        default:
+            this.typeStr = "普通NFT";
+    }
+
     // 设置NFT整体状态描述
     switch (this.status) {
         case 1:

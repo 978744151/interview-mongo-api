@@ -48,6 +48,13 @@ const asyncHandler = require("../middleware/async");
  *         category:
  *           type: string
  *           description: 分类ID
+ *         type:
+ *           type: number
+ *           enum: [1, 2]
+ *           description: 主分类类型(1:普通NFT, 2:盲盒)
+ *         typeStr:
+ *           type: string
+ *           description: 主分类类型描述
  *         owner:
  *           type: string
  *           description: 所有者ID
@@ -96,6 +103,12 @@ const asyncHandler = require("../middleware/async");
  *           type: number
  *           enum: [1, 2, 3, 4, 5, 6, 7, 8]
  *         description: 按状态筛选(1:未发布, 2:已发布, 3:已售罄, 4:已下架, 5:限时发售, 6:预售, 7:热卖中, 8:即将售罄)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: number
+ *           enum: [1, 2]
+ *         description: 按主分类筛选(1:普通NFT, 2:盲盒)
  *     responses:
  *       200:
  *         description: 成功获取NFT列表
@@ -109,15 +122,20 @@ const asyncHandler = require("../middleware/async");
  *                 data:
  *                   type: object
  */
-// 获取NFT列表（支持分类和状态过滤）
+// 获取NFT列表（支持分类、状态和类型过滤）
 exports.getNFTs = asyncHandler(async (req, res) => {
     try {
-        const { category, status } = req.query;
+        const { category, status, type } = req.query;
         const query = {};
 
         // 只有当 category 有值且不为空字符串时才加到查询条件
         if (category && category !== "") {
             query.category = category;
+        }
+
+        // 如果指定了类型，添加到查询条件
+        if (type && !isNaN(parseInt(type))) {
+            query.type = parseInt(type);
         }
 
         // 如果指定了状态，添加到查询条件
@@ -176,7 +194,7 @@ exports.createNFT = asyncHandler(async (req, res) => {
         });
     }
 
-    const { name, _id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions } = req.body;
+    const { name, _id, description, imageUrl, price, author, likes, quantity, category: categoryId, editions, type } = req.body;
     // 确保状态码和状态描述同步更新
     if (req.body.status) {
         const statusMap = {
@@ -191,6 +209,24 @@ exports.createNFT = asyncHandler(async (req, res) => {
         };
         req.body.statusStr = statusMap[req.body.status] || "未知状态";
     }
+
+    // 确保类型码和类型描述同步更新
+    if (req.body.type) {
+        const typeMap = {
+            1: "普通NFT",
+            2: "盲盒"
+        };
+        req.body.typeStr = typeMap[req.body.type] || "普通NFT";
+    }
+
+    // 确保类型码和类型描述同步更新
+    const typeValue = type || 1; // 默认为普通NFT
+    const typeMap = {
+        1: "普通NFT",
+        2: "盲盒"
+    };
+    const typeStrValue = typeMap[typeValue] || "普通NFT";
+
     // 创建基本NFT
     const nftData = {
         name,
@@ -202,6 +238,8 @@ exports.createNFT = asyncHandler(async (req, res) => {
         quantity,
         soldQty: '0',
         category: categoryId,
+        type: typeValue,
+        typeStr: typeStrValue,
         owner: req.user.id,
         _id
     };
@@ -348,6 +386,15 @@ exports.updateNFT = asyncHandler(async (req, res) => {
             8: "即将售罄"
         };
         req.body.statusStr = statusMap[req.body.status] || "未知状态";
+    }
+
+    // 确保类型码和类型描述同步更新
+    if (req.body.type) {
+        const typeMap = {
+            1: "普通NFT",
+            2: "盲盒"
+        };
+        req.body.typeStr = typeMap[req.body.type] || "普通NFT";
     }
     // 只允许更新基本信息，不允许直接更新editions
     const { editions, ...updateData } = req.body;
@@ -662,22 +709,40 @@ exports.deleteNFT = asyncHandler(async (req, res) => {
  *           type: string
  *         required: true
  *         description: 用户ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: number
+ *           enum: [1, 2]
+ *         description: 按主分类筛选(1:普通NFT, 2:盲盒)
  *     responses:
  *       200:
  *         description: 成功获取用户NFT列表
  */
 // 获取用户拥有的NFT列表
 exports.getUserNFTs = asyncHandler(async (req, res) => {
-    // 方法一：查找主所有者为指定用户的NFT
-
+    // 获取查询参数
+    const { type } = req.query;
     const userId = req.params?.userId || req.user.id;
 
-    const ownedNFTs = await NFT.find({ owner: userId })
+    // 构建查询条件
+    const query1 = { owner: userId };
+    const query2 = { 'editions.owner': userId };
+
+    // 如果指定了类型，添加到查询条件
+    if (type && !isNaN(parseInt(type))) {
+        const typeNum = parseInt(type);
+        query1.type = typeNum;
+        query2.type = typeNum;
+    }
+
+    // 方法一：查找主所有者为指定用户的NFT
+    const ownedNFTs = await NFT.find(query1)
         .populate('category', 'name')
         .populate('owner', 'name email');
 
     // 方法二：查找任何版本所有者为指定用户的NFT
-    const editionOwnedNFTs = await NFT.find({ 'editions.owner': userId })
+    const editionOwnedNFTs = await NFT.find(query2)
         .populate('category', 'name')
         .populate('owner', 'name email')
         .populate('editions.owner', 'name email');
@@ -721,15 +786,32 @@ exports.getUserNFTs = asyncHandler(async (req, res) => {
  *   get:
  *     summary: 获取所有可购买的NFT版本
  *     tags: [NFT]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: number
+ *           enum: [1, 2]
+ *         description: 按主分类筛选(1:普通NFT, 2:盲盒)
  *     responses:
  *       200:
  *         description: 成功获取可购买的NFT列表
  */
 // 获取所有可购买的NFT版本
 exports.getAvailableNFTs = asyncHandler(async (req, res) => {
+    // 获取查询参数
+    const { type } = req.query;
+
+    // 构建查询条件
+    const query = { 'editions.status': 2 };
+
+    // 如果指定了类型，添加到查询条件
+    if (type && !isNaN(parseInt(type))) {
+        query.type = parseInt(type);
+    }
+
     // 查找包含寄售中(status=2)版本的NFT
-    console.log('12212121121221212212112');
-    const availableNFTs = await NFT.find({ 'editions.status': 2 })
+    const availableNFTs = await NFT.find(query)
         .populate('category', 'name')
         .populate('owner', 'name email')
         .populate('editions.owner', 'name email');

@@ -5,7 +5,9 @@ const {
   createMysteryBox,
   updateMysteryBox,
   deleteMysteryBox,
-  purchaseMysteryBox
+  purchaseMysteryBox,
+  openMysteryBox,
+  getUserMysteryBoxes
 } = require('../controllers/mysteryBox');
 
 const router = express.Router();
@@ -18,6 +20,8 @@ router.get('/:id', getMysteryBox);
 
 // 登录用户路由
 router.post('/:id/purchase', protect, purchaseMysteryBox);
+router.post('/:id/open', protect, openMysteryBox);
+router.get('/user/boxes', protect, getUserMysteryBoxes);
 
 // 管理员路由
 router.post('/', protect, authorize('admin', 'publisher'), createMysteryBox);
