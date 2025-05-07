@@ -13,6 +13,9 @@ const mongoose = require('mongoose');
  *         mysteryBox:
  *           type: string
  *           description: 盲盒ID
+ *         edition:
+ *           type: string
+ *           description: 拥有的盲盒实例ID
  *         opened:
  *           type: boolean
  *           description: 是否已开启
@@ -32,6 +35,11 @@ const UserMysteryBoxSchema = new mongoose.Schema({
     mysteryBox: {
         type: mongoose.Schema.ObjectId,
         ref: 'MysteryBox',
+        required: true
+    },
+    edition: {
+        type: String,
+        description: '拥有的盲盒实例ID',
         required: true
     },
     opened: {

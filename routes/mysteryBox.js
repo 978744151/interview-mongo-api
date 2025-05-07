@@ -7,7 +7,9 @@ const {
   deleteMysteryBox,
   purchaseMysteryBox,
   openMysteryBox,
-  getUserMysteryBoxes
+  getUserMysteryBoxes,
+  updateMysteryBoxEdition,
+  updateMysteryBoxStatus
 } = require('../controllers/mysteryBox');
 
 const router = express.Router();
@@ -26,6 +28,8 @@ router.get('/user/boxes', protect, getUserMysteryBoxes);
 // 管理员路由
 router.post('/', protect, authorize('admin', 'publisher'), createMysteryBox);
 router.put('/:id', protect, authorize('admin', 'publisher'), updateMysteryBox);
+router.put('/:id/status', protect, authorize('admin', 'publisher'), updateMysteryBoxStatus);
+router.put('/:id/editions/:editionId', protect, authorize('admin', 'publisher'), updateMysteryBoxEdition);
 router.delete('/:id', protect, authorize('admin', 'publisher'), deleteMysteryBox);
 
 module.exports = router; 
