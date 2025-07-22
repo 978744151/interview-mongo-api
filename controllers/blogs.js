@@ -48,6 +48,12 @@ const Comment = require('../models/comments');
  *   get:
  *     summary: 获取所有博客
  *     tags: [博客]
+ *     parameters:
+ *       - in: query
+ *         name: sortByLatest
+ *         schema:
+ *           type: boolean
+ *         description: 是否按最新时间排序
  *     responses:
  *       200:
  *         description: 成功获取所有博客
@@ -60,25 +66,74 @@ const Comment = require('../models/comments');
  *                   type: boolean
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           commentCount:
+ *                             type: number
+ *                             description: 博客评论数量
+ *                           likeCount:
+ *                             type: number
+ *                             description: 博客点赞总数（所有评论的点赞数之和）
+ *                           createName:
+ *                             type: string
+ *                             description: 创建者姓名
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           defaultImage:
+ *                             type: string
+ *                     total:
+ *                       type: number
  */
 // 获取所有博客
 exports.getAllBlogs = async (req, res) => {
     try {
-        const blogs = await Blog.find({})
+        // 检查是否需要按最新时间排序
+        const sortByLatest = req.query.sortByLatest === 'true';
+
+        let query = Blog.find({})
             .populate({
                 path: 'user',
                 select: 'name email role avatar'
             });
 
-        const data = blogs.map(blog => {
+        // 如果需要按最新时间排序，添加排序条件
+        if (sortByLatest) {
+            query = query.sort({ createdAt: -1 });
+        }
+
+        const blogs = await query;
+
+        const data = await Promise.all(blogs.map(async (blog) => {
             const blogObj = blog.toObject();
             blogObj.createName = blog.user ? blog.user.name : '';
             // 直接获取图片URL数组
             blogObj.images = blog.blogImage.map(img => img.image);
             // 添加默认图片，取第一张图片，如果没有则为空字符串
             blogObj.defaultImage = blog.blogImage[0]?.image || '';
+
+            // 获取博客评论数量
+            const commentCount = await Comment.countDocuments({ blog: blog._id });
+            blogObj.commentCount = commentCount;
+
+            // 获取博客所有评论的点赞总数
+            const comments = await Comment.find({ blog: blog._id });
+            const totalLikes = comments.reduce((sum, comment) => sum + (comment.likeCount || 0), 0);
+            blogObj.likeCount = totalLikes;
+
             return blogObj;
-        });
+        }));
 
         return res.status(200).json({
             success: true,

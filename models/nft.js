@@ -53,6 +53,7 @@ const NFTEditionSchema = new mongoose.Schema({
     shop_id: {
         type: String
     },
+    
     status: {
         type: Number,
         enum: [1, 2, 3, 4, 5, 6, 7],
@@ -353,8 +354,11 @@ NFTSchema.pre('save', function (next) {
                 default:
                     edition.statusStr = "未知状态";
             }
+
+
         });
     }
+
     next();
 });
 

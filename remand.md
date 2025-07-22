@@ -1,0 +1,2 @@
+打开终端
+输入 mongosh打开mongod

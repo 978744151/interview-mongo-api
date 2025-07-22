@@ -43,7 +43,14 @@ router.route('/:id/editions/:subId')
 router.route('/:id/editions/:subId/transfer')
     .post(protect, authorize('admin', 'owner'), nftController.transferNFTEdition);
 
+// 统一更改NFT子集状态
+router.route('/editions/batch-update-status/:id')
+    .put(protect, authorize('admin', 'owner'), nftController.batchUpdateNFTEditionsStatus);
+
 router.route('/purchaseNFT')
     .post(protect, nftController.purchaseNFT);
+
+router.route('/:id/editions/:editionId/detail')
+    .get(nftController.getSingleNFTEditionDetail);
 
 module.exports = router;
