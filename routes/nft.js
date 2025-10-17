@@ -19,6 +19,14 @@ router.route('/:id')
 router.route('/user/collect')
     .get(protect, nftController.getUserNFTs);
 
+// 获取用户拥有的单个NFT详情
+router.route('/user/detail/:nftId')
+    .get(protect, nftController.getUserNFTById);
+
+// 获取单个NFT的版本详情
+router.route('/editions/detail')
+.get(nftController.getSingleNFTEditionDetail);   
+ 
 // 获取可用于购买的NFT
 router.route('/available-list')
     .get(nftController.getAvailableNFTs);
@@ -50,7 +58,12 @@ router.route('/editions/batch-update-status/:id')
 router.route('/purchaseNFT')
     .post(protect, nftController.purchaseNFT);
 
-router.route('/:id/editions/:editionId/detail')
-    .get(nftController.getSingleNFTEditionDetail);
+// 取消寄售NFT版本
+router.route('/editions/cancel-consign')
+    .post(protect,  nftController.cancelConsignNFTEdition);
+// 寄售NFT版本
+router.route('/editions/consign')
+    .post(protect, nftController.consignNFTEdition);
+
 
 module.exports = router;
